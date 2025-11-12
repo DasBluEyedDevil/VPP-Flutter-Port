@@ -26,7 +26,7 @@ class EmptyState extends StatelessWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.large),
+        padding: const EdgeInsets.all(AppSpacing.extraLarge), // 32dp
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -37,7 +37,7 @@ class EmptyState extends StatelessWidget {
               size: 64,
               color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
             ),
-            const SizedBox(height: AppSpacing.medium),
+            const SizedBox(height: AppSpacing.large), // 24dp
             
             // Title
             Text(
@@ -49,30 +49,24 @@ class EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             
+            const SizedBox(height: AppSpacing.small), // 8dp
+            
             // Message
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
-              child: Text(
-                message,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
+            Text(
+              message,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
+              textAlign: TextAlign.center,
             ),
             
             // Optional Action Button
             if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: AppSpacing.small),
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.medium),
-                child: FilledButton(
-                  onPressed: onAction,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                  ),
-                  child: Text(actionLabel!),
-                ),
+              const SizedBox(height: AppSpacing.large),
+              FilledButton.icon(
+                onPressed: onAction,
+                icon: const Icon(Icons.add),
+                label: Text(actionLabel!),
               ),
             ],
           ],
