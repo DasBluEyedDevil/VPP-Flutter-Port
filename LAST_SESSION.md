@@ -1,8 +1,8 @@
 # Last Session - VPP_Flutter_Port
 
 **Date:** 2025-11-12
-**Phase:** Phase 5 - UI Layer 🟢 **IN PROGRESS** (Tasks 1-6 Complete)
-**Status:** 🟢 Input Widgets Complete (82/84 files, 98%)
+**Phase:** Phase 5 - UI Layer 🟢 **IN PROGRESS** (Tasks 1-6, 19-20 Complete)
+**Status:** 🟡 Complex Screens Implemented with Fixes Needed (82/84 files, 98%)
 
 ---
 
@@ -249,10 +249,33 @@ Progress:
    - Delegated to Cursor CLI successfully
    - Commit SHA: 2f6dffc
 
-7. **NEXT: Task 7 - Workout Widgets (CountdownCard, RestTimerCard, SetSummaryCard)**
-   - Delegate to Cursor CLI for workout UI components
-   - Create widget tests
-   - Verify animations and timers work correctly
+7. **SKIPPED (Tasks 7-18): Moved to complex screens implementation**
+
+19. ✅ Task 19: Active Workout Screen (Complex) - COMPLETE (with known issues)
+   - active_workout_screen.dart (370 lines) - 9-state machine UI
+   - ConsumerWidget with workoutSessionProvider + bleConnectionProvider
+   - All workout states: countdown, active, paused, rest, summary
+   - Real-time metrics display, rep counter, completed sets list
+   - Connection lost handling, pause/resume/stop controls
+   - Summary view with stats (sets, reps, duration, volume)
+   - Commit SHA: 3e39547
+   - **72 analyzer errors** - API mismatches need fixing
+
+20. ✅ Task 20: Just Lift Screen (Complex) - COMPLETE (with known issues)
+   - just_lift_screen.dart (305 lines) - Auto-start/auto-stop logic
+   - Idle, countdown, active, autoStop, justLiftSummary states
+   - Handle detection prompt, real-time metrics, rep counter
+   - Auto-stop countdown (3s idle), auto-return to idle after summary
+   - BLE connection state handling
+   - Commit SHA: 3e39547
+   - **Shares 72 analyzer errors** with Task 19
+
+21. **NEXT: Fix API Mismatches in Active Workout & Just Lift Screens**
+   - WorkoutSessionState field names (workoutState vs state)
+   - Widget constructor parameters (SetSummaryCard, RestTimerCard)
+   - BLE connection state type checks
+   - Provider method names verification
+   - Target: 0 analyzer errors
 
 ---
 

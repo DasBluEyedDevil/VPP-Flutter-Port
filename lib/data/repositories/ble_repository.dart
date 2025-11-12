@@ -324,7 +324,7 @@ class BleRepositoryImpl implements BleRepository {
       // Send initial command
       logger.d("Sending init command (4 bytes)...");
       final initCommand = ProtocolBuilder.buildInitCommand();
-      _connectionLogger.logCommandSent("INIT_COMMAND", deviceName, deviceAddress, initCommand);
+      _connectionLogger.logCommandSent("INIT_COMMAND", deviceName, deviceAddress, commandData: initCommand);
       await _bleManager?.sendCommand(initCommand);
       await Future.delayed(const Duration(milliseconds: 200));
 
@@ -333,7 +333,7 @@ class BleRepositoryImpl implements BleRepository {
       // Send init preset
       logger.d("Sending init preset (34 bytes)...");
       final initPreset = ProtocolBuilder.buildInitPreset();
-      _connectionLogger.logCommandSent("INIT_PRESET", deviceName, deviceAddress, initPreset);
+      _connectionLogger.logCommandSent("INIT_PRESET", deviceName, deviceAddress, commandData: initPreset);
       await _bleManager?.sendCommand(initPreset);
       await Future.delayed(const Duration(milliseconds: 200));
 
@@ -402,8 +402,8 @@ class BleRepositoryImpl implements BleRepository {
             "START_WORKOUT_PROGRAM",
             deviceName,
             deviceAddress,
-            programFrame,
-            additionalInfo,
+            commandData: programFrame,
+            additionalInfo: additionalInfo,
           );
           _bleManager?.sendCommand(programFrame);
         },
@@ -420,8 +420,8 @@ class BleRepositoryImpl implements BleRepository {
             "START_WORKOUT_ECHO",
             deviceName,
             deviceAddress,
-            echoFrame,
-            "Mode=Echo, Level=${level.levelValue}, Eccentric=${eccentricLoad.percentage}%, Reps=${params.reps}, JustLift=${params.isJustLift}",
+            commandData: echoFrame,
+            additionalInfo: "Mode=Echo, Level=${level.levelValue}, Eccentric=${eccentricLoad.percentage}%, Reps=${params.reps}, JustLift=${params.isJustLift}",
           );
           _bleManager?.sendCommand(echoFrame);
         },
@@ -488,7 +488,7 @@ class BleRepositoryImpl implements BleRepository {
       logger.d("STOP_DEBUG: INIT command bytes: ${initCommand.map((b) => "0x${b.toRadixString(16).padLeft(2, '0')}").join(" ")}");
       logger.d("STOP_DEBUG: INIT command size: ${initCommand.length} bytes");
       logger.d("STOP_DEBUG: Sending INIT command to release tension...");
-      _connectionLogger.logCommandSent("STOP_WORKOUT", deviceName, deviceAddress, initCommand);
+      _connectionLogger.logCommandSent("STOP_WORKOUT", deviceName, deviceAddress, commandData: initCommand);
       await _bleManager?.sendCommand(initCommand);
       final afterInitSend = DateTime.now().millisecondsSinceEpoch;
       logger.d("STOP_DEBUG: [$afterInitSend] AFTER sending INIT command (took ${afterInitSend - beforeInitSend}ms)");
@@ -533,8 +533,8 @@ class BleRepositoryImpl implements BleRepository {
         "SET_LED_COLOR",
         deviceName,
         deviceAddress,
-        colorFrame,
-        "Scheme=$schemeIndex",
+        commandData: colorFrame,
+        additionalInfo: "Scheme=$schemeIndex",
       );
       await _bleManager?.sendCommand(colorFrame);
 
