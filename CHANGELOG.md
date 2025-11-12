@@ -6,6 +6,122 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2025-11-12] - BLE Connection UI Components Complete ✅
+
+### Session Summary
+- **Duration:** 45 minutes
+- **Phase:** UI Exact Matching - BLE Connection Components (5/16 screens)
+- **Status:** All BLE connection UI components implemented and verified
+- **Files:** 1 created, 4 updated, 2 verified
+- **Approach:** Quadrumvirate workflow (Gemini analysis → Cursor implementation)
+- **Commit:** Pending
+
+### Added
+- **DeviceSelectorDialog** (`lib/presentation/widgets/dialogs/device_selector_dialog.dart`) - NEW
+  - Manual device selection dialog with scanning state
+  - AlertDialog with "Select Vitruvian Device" title
+  - Device list (ListView, 4dp spacing)
+  - Device cards: surfaceContainerHighest background, 16dp rounded corners
+  - Shows device name (bodyLarge, Bold) + MAC address (bodySmall)
+  - Arrow icon (keyboard_arrow_right, primary color)
+  - Rescan button (only when !isScanning): Refresh icon (18dp) + "Rescan" text
+  - Cancel button
+  - Empty state: scanning indicator OR "No devices found"
+  - Pixel-perfect match to Kotlin DeviceSelectorDialog
+
+### Updated
+- **MainScreen TopAppBar** (`lib/presentation/screens/main_screen.dart`)
+  - Replaced simple 2-state Bluetooth icon with full 5-state color-coded system
+  - Column with icon (20dp) + text (9sp labelSmall)
+  - 48dp minimum touch target, 4dp horizontal padding
+  - Click to connect/disconnect
+  - Helper methods: `_getConnectionIcon()`, `_getConnectionColor()`, `_getConnectionText()`
+  - **5 State Colors (exact hex):**
+    - Connected: Green (#22C55E) - bluetooth icon
+    - Connecting: Yellow (#FBBF24) - bluetooth_searching icon
+    - Disconnected: Red (#EF4444) - bluetooth_disabled icon
+    - Scanning: Blue (#3B82F6) - bluetooth_searching icon
+    - Error: Red (#EF4444) - bluetooth_disabled icon
+
+- **ConnectingOverlay** (`lib/presentation/widgets/overlays/connecting_overlay.dart`)
+  - Simplified from StatefulWidget to StatelessWidget (removed extra features)
+  - Non-dismissible modal (PopScope with canPop: false)
+  - 60% scrim opacity background
+  - 48dp CircularProgressIndicator
+  - titleMedium: "Connecting to device..."
+  - bodySmall (onSurfaceVariant): "Scanning for Vitruvian Trainer"
+  - Cancel button with proper spacing
+  - Exact match to Kotlin ConnectingOverlay.kt
+
+- **ConnectionErrorDialog** (`lib/presentation/widgets/dialogs/connection_error_dialog.dart`)
+  - Added warning icon (48dp)
+  - Added troubleshooting section:
+    - Divider with 4dp vertical padding
+    - "Troubleshooting tips:" header (labelLarge, Bold, primary color)
+    - 4 bullet points (bodySmall, 6dp spacing):
+      - "• Ensure the machine is powered on"
+      - "• Try turning Bluetooth off and on"
+      - "• Move closer to the machine"
+      - "• Check that no other device is connected"
+  - Retry button (optional, if onRetry provided)
+  - OK/Dismiss button
+  - Exact match to Kotlin ConnectionErrorDialog.kt
+
+- **ConnectionLostDialog** (`lib/presentation/widgets/dialogs/connection_lost_dialog.dart`)
+  - Changed icon to bluetooth_disabled (error color, 48dp)
+  - Updated title styling to headlineSmall with Bold
+  - Split message into two parts:
+    - Primary: "Bluetooth connection to the trainer was lost during your workout." (bodyLarge)
+    - Secondary: "Rep tracking may have been interrupted. Please reconnect to continue." (bodyMedium, onSurfaceVariant)
+  - 8dp spacer between messages
+  - Changed "End Workout" to "Dismiss"
+  - Made Reconnect button Bold
+  - Non-dismissible (barrierDismissible: false)
+  - Exact match to Kotlin ConnectionLostDialog.kt
+
+### Verified
+- **ScannedDevice** (`lib/domain/models/scanned_device.dart`)
+  - Already existed with proper freezed structure
+  - Contains: name, address (MAC), rssi (signal strength - NOT displayed)
+  - Matches Kotlin ScannedDevice data model exactly
+
+- **ConnectionStatusBanner** (`lib/presentation/widgets/banners/connection_status_banner.dart`)
+  - Already matches Kotlin ConnectionStatusBanner.kt specs
+  - Card with surfaceContainerHighest background
+  - Bluetooth icon (24dp, error color when disconnected)
+  - "Not connected to machine" message (bodyMedium, Medium weight)
+  - Connect button (TextButton, labelLarge, Bold)
+  - 16dp horizontal padding, 8dp vertical padding
+
+### Analysis Documents
+- Created `BLE_CONNECTION_ANALYSIS.md` (42KB, 17 sections, ~3,250 lines of Kotlin analyzed)
+- Created `.cursor_briefing_ble_connection_exact_match.md` (implementation brief)
+
+### Quality Assurance
+- **flutter analyze:** 0 new errors (all modified files clean)
+- **Spacing:** 8dp grid (4, 8, 16, 24, 32, 48dp) - exact match
+- **Typography:** Material 3 text styles - exact match
+- **Colors:** Exact hex codes from Kotlin - verified
+- **Pixel-perfect:** All components match VitruvianRedux exactly
+
+### UI Exact Matching Progress
+**Completed (5/16 screens):**
+1. ✅ Splash Screen
+2. ✅ Home/Dashboard Screen
+3. ✅ Active Workout Screen - Phase 1
+4. ✅ Just Lift Screen
+5. ✅ BLE Connection Components (all 6 distributed UI components)
+
+**Remaining (11/16 screens):**
+6. Routines Tab
+7. Programs Tab
+8. Settings Tab
+9-16. (Additional screens)
+
+**Progress:** 31% Complete (5 of 16 screens)
+
+---
+
 ## [2025-11-12] - Code Quality Cleanup ✅
 
 ### Session Summary

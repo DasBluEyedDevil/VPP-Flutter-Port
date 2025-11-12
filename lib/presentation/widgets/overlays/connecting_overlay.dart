@@ -1,188 +1,92 @@
 import 'package:flutter/material.dart';
 import '../../theme/spacing.dart';
 
-/// Full-screen BLE connecting overlay with progress indication.
-/// 
-/// Shows a semi-transparent overlay with a centered card displaying:
-/// - Circular progress indicator
-/// - Connection status text with device name
-/// - Optional timeout message if connection takes >15 seconds
-/// - Cancel button
-/// 
-/// Uses Stack with Positioned.fill for full-screen coverage.
-class ConnectingOverlay extends StatefulWidget {
-  /// Whether the connection is in progress
-  final bool isConnecting;
-  
-  /// Name of the device being connected to
-  final String? deviceName;
-  
-  /// Connection progress (0.0 to 1.0)
-  final double progress;
-  
+/// Full-screen BLE connecting overlay (matches Kotlin ConnectingOverlay.kt).
+///
+/// Shows a non-dismissible full-screen modal with:
+/// - Semi-transparent scrim background (60% opacity)
+/// - Centered card with 32dp padding
+/// - 48dp circular progress indicator
+/// - "Connecting to device..." title (titleMedium)
+/// - "Scanning for Vitruvian Trainer" subtitle (bodySmall, onSurfaceVariant)
+/// - Cancel button with 8dp top padding
+///
+/// Cannot be dismissed by tapping outside or back button.
+class ConnectingOverlay extends StatelessWidget {
   /// Callback when cancel is pressed
-  final VoidCallback? onCancel;
+  final VoidCallback onCancel;
 
   const ConnectingOverlay({
     super.key,
-    required this.isConnecting,
-    this.deviceName,
-    this.progress = 0.0,
-    this.onCancel,
+    required this.onCancel,
   });
 
   @override
-  State<ConnectingOverlay> createState() => _ConnectingOverlayState();
-}
-
-class _ConnectingOverlayState extends State<ConnectingOverlay> {
-  bool _showTimeoutMessage = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.isConnecting) {
-      _checkTimeout();
-    }
-  }
-
-  @override
-  void didUpdateWidget(ConnectingOverlay oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isConnecting && !oldWidget.isConnecting) {
-      // Connection just started
-      _showTimeoutMessage = false;
-      _checkTimeout();
-    } else if (!widget.isConnecting && oldWidget.isConnecting) {
-      // Connection finished
-      _showTimeoutMessage = false;
-    }
-  }
-
-  void _checkTimeout() {
-    if (!widget.isConnecting) return;
-    
-    Future.delayed(const Duration(seconds: 15), () {
-      if (mounted && widget.isConnecting) {
-        setState(() {
-          _showTimeoutMessage = true;
-        });
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (!widget.isConnecting) {
-      return const SizedBox.shrink();
-    }
-
     final theme = Theme.of(context);
-    final deviceName = widget.deviceName ?? 'Vitruvian Trainer';
 
-    return Stack(
-      children: [
-        // Semi-transparent black background
-        Positioned.fill(
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: EdgeInsets.zero,
+      child: PopScope(
+        canPop: false, // Prevent back button dismiss
+        child: GestureDetector(
+          onTap: () {}, // Prevent tap-outside dismiss
           child: Container(
-            color: Colors.black.withValues(alpha: 0.6),
-          ),
-        ),
-        
-        // Centered card with content
-        Center(
-          child: Card(
-            margin: const EdgeInsets.all(AppSpacing.extraLarge),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.extraLarge),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Circular progress indicator
-                  SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: CircularProgressIndicator(
-                      value: widget.progress > 0.0 ? widget.progress : null,
-                      strokeWidth: 3,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        theme.colorScheme.primary,
+            width: double.infinity,
+            height: double.infinity,
+            color: theme.colorScheme.scrim.withValues(alpha: 0.6),
+            child: Center(
+              child: Card(
+                margin: const EdgeInsets.all(AppSpacing.extraLarge),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.extraLarge),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // 48dp circular progress indicator
+                      const SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: CircularProgressIndicator(),
                       ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: AppSpacing.medium),
-                  
-                  // Connection status text
-                  Text(
-                    'Connecting to $deviceName...',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurface,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  
-                  const SizedBox(height: AppSpacing.small),
-                  
-                  // Subtitle text
-                  Text(
-                    'Scanning for Vitruvian Trainer',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  
-                  // Timeout message (if >15s)
-                  if (_showTimeoutMessage) ...[
-                    const SizedBox(height: AppSpacing.medium),
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.small),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.errorContainer,
-                        borderRadius: BorderRadius.circular(AppSpacing.small),
+
+                      const SizedBox(height: AppSpacing.medium),
+
+                      // Title
+                      Text(
+                        'Connecting to device...',
+                        style: theme.textTheme.titleMedium,
+                        textAlign: TextAlign.center,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.warning_amber_rounded,
-                            size: 16,
-                            color: theme.colorScheme.onErrorContainer,
-                          ),
-                          const SizedBox(width: AppSpacing.small),
-                          Text(
-                            'Connection taking longer than expected',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onErrorContainer,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  
-                  // Cancel button
-                  if (widget.onCancel != null) ...[
-                    const SizedBox(height: AppSpacing.medium),
-                    TextButton(
-                      onPressed: widget.onCancel,
-                      child: Text(
-                        'Cancel',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+
+                      const SizedBox(height: AppSpacing.small),
+
+                      // Subtitle
+                      Text(
+                        'Scanning for Vitruvian Trainer',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                  ],
-                ],
+
+                      const SizedBox(height: AppSpacing.small),
+
+                      // Cancel button
+                      TextButton(
+                        onPressed: onCancel,
+                        child: const Text('Cancel'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 }

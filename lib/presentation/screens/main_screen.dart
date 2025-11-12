@@ -5,7 +5,7 @@ import '../navigation/routes.dart';
 import '../providers/ble_connection_provider.dart';
 import '../widgets/banners/connection_status_banner.dart';
 import '../theme/spacing.dart';
-import '../../domain/models/connection_state.dart';
+import '../../domain/models/connection_state.dart' as ble;
 
 /// Main screen container with bottom navigation bar for tabs.
 /// Uses GoRouter ShellRoute to display child routes.
@@ -21,22 +21,86 @@ class MainScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final connectionStateAsync = ref.watch(connectionStateProvider);
     final currentIndex = _calculateSelectedIndex(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('VPP'),
         actions: [
-          // Connection status icon
-          connectionStateAsync.when(
-            data: (state) {
-              final isConnected = state is Connected;
-              return Icon(
-                isConnected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
-                color: isConnected ? Colors.green : Colors.grey,
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const Icon(Icons.bluetooth_disabled, color: Colors.grey),
+          // Connection status icon with 5-state system
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              InkWell(
+                onTap: () {
+                  connectionStateAsync.whenData((state) {
+                    if (state is ble.Connected) {
+                      ref.read(bleConnectionActionsProvider).disconnect();
+                    } else {
+                      ref.read(bleConnectionActionsProvider).ensureConnection(
+                        onConnected: () {},
+                        onFailed: () {},
+                      );
+                    }
+                  });
+                },
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 48,
+                    minHeight: 48,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      connectionStateAsync.when(
+                        data: (state) => Icon(
+                          _getConnectionIcon(state),
+                          size: 20,
+                          color: _getConnectionColor(state),
+                        ),
+                        loading: () => const Icon(
+                          Icons.bluetooth_disabled,
+                          size: 20,
+                          color: Color(0xFFEF4444),
+                        ),
+                        error: (_, __) => const Icon(
+                          Icons.bluetooth_disabled,
+                          size: 20,
+                          color: Color(0xFFEF4444),
+                        ),
+                      ),
+                      connectionStateAsync.when(
+                        data: (state) => Text(
+                          _getConnectionText(state),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 9,
+                            color: _getConnectionColor(state),
+                          ),
+                          maxLines: 1,
+                        ),
+                        loading: () => Text(
+                          'Disconnected',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 9,
+                            color: const Color(0xFFEF4444),
+                          ),
+                          maxLines: 1,
+                        ),
+                        error: (_, __) => Text(
+                          'Error',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 9,
+                            color: const Color(0xFFEF4444),
+                          ),
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: AppSpacing.medium),
         ],
@@ -46,7 +110,7 @@ class MainScreen extends ConsumerWidget {
           // Show connection banner when not connected
           connectionStateAsync.when(
             data: (state) {
-              if (state is Connected) {
+              if (state is ble.Connected) {
                 return const SizedBox.shrink();
               }
               return const ConnectionStatusBanner();
@@ -119,5 +183,38 @@ class MainScreen extends ConsumerWidget {
   bool _shouldShowFAB(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
     return location.contains('/workout') || location == Routes.home;
+  }
+
+  /// Get connection icon based on state
+  IconData _getConnectionIcon(ble.ConnectionState state) {
+    return state.when(
+      disconnected: () => Icons.bluetooth_disabled,
+      scanning: () => Icons.bluetooth_searching,
+      connecting: () => Icons.bluetooth_searching,
+      connected: (deviceName, deviceAddress, hardwareModel) => Icons.bluetooth,
+      error: (message, throwable) => Icons.bluetooth_disabled,
+    );
+  }
+
+  /// Get connection color based on state
+  Color _getConnectionColor(ble.ConnectionState state) {
+    return state.when(
+      disconnected: () => const Color(0xFFEF4444),     // red-500
+      scanning: () => const Color(0xFF3B82F6),         // blue-500
+      connecting: () => const Color(0xFFFBBF24),       // yellow-400
+      connected: (deviceName, deviceAddress, hardwareModel) => const Color(0xFF22C55E), // green-500
+      error: (message, throwable) => const Color(0xFFEF4444), // red-500
+    );
+  }
+
+  /// Get connection text based on state
+  String _getConnectionText(ble.ConnectionState state) {
+    return state.when(
+      disconnected: () => 'Disconnected',
+      scanning: () => 'Scanning',
+      connecting: () => 'Connecting',
+      connected: (deviceName, deviceAddress, hardwareModel) => 'Connected',
+      error: (message, throwable) => 'Error',
+    );
   }
 }
