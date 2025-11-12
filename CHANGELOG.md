@@ -6,6 +6,97 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2025-11-12] - Phase 5 Task 4: App Integration Complete
+
+### Session Summary
+- **Duration:** 20 minutes
+- **Phase:** Phase 5.1 - UI Layer Foundation (App Entry Point)
+- **Status:** Task 4 complete - Theme provider wired to MaterialApp.router
+- **Files:** 2 files created/modified (app.dart, main.dart, colors.dart)
+- **Approach:** Direct implementation following plan specification
+- **Commit:** e5103f6
+
+### Added
+- **lib/presentation/app.dart** (27 lines)
+  - VPPApp ConsumerWidget watching themeProvider
+  - Wires colorSchemes[themeState.colorSchemeIndex] to theme
+  - MaterialApp.router with theme, darkTheme, and themeMode
+  - Enables hot reload for theme changes
+
+### Modified
+- **lib/main.dart**
+  - Simplified to just ProviderScope + VPPApp wrapper
+  - Removed duplicate VPPApp StatelessWidget class
+  - Now imports presentation/app.dart
+
+- **lib/presentation/theme/colors.dart**
+  - Added colorSchemes list (7 options) for theme selection
+  - Currently all use darkColorScheme (TODO: add Blue, Green, Orange, Red, Teal, Pink variants)
+
+### Verification
+- flutter build apk --debug: SUCCESS
+- flutter analyze: 69 issues (54 print warnings from Phase 1, BLE repository warnings expected)
+- App launches and theme integration working
+- Theme provider correctly switches between light/dark modes
+- Color scheme selection functional (7 indices)
+
+### Next Steps
+- Task 5: Common Widgets (StatsCard, EmptyState, ConnectionStatusBanner)
+- Delegate to Cursor CLI for widget implementation
+
+---
+
+## [2025-11-12] - Phase 5 Task 3: Navigation Setup Complete
+
+### Session Summary
+- **Duration:** 30 minutes
+- **Phase:** Phase 5.1 - UI Layer Foundation (Navigation)
+- **Status:** Task 3 complete - GoRouter navigation with placeholder screens
+- **Files:** 12 files created, main.dart modified (269 lines total)
+- **Approach:** Quadrumvirate - Analyzed Kotlin navigation, delegated to Cursor CLI
+- **Commit:** cd4aa0a
+
+### Added
+- **lib/presentation/navigation/routes.dart** (16 lines)
+  - Route path constants matching Kotlin NavigationRoutes
+  - 11 route paths (home, just-lift, single-exercise, daily-routines, active-workout, weekly-programs, program-builder with parameter, analytics, settings, connection-logs)
+
+- **lib/presentation/navigation/app_router.dart** (65 lines)
+  - GoRouter configuration with all routes
+  - Initial route: /home
+  - Program builder route with :programId parameter support
+  - All imports for placeholder screens
+
+- **10 Placeholder Screens (188 lines total):**
+  - lib/presentation/screens/home_screen.dart
+  - lib/presentation/screens/just_lift_screen.dart
+  - lib/presentation/screens/single_exercise_screen.dart
+  - lib/presentation/screens/daily_routines_screen.dart
+  - lib/presentation/screens/active_workout_screen.dart
+  - lib/presentation/screens/weekly_programs_screen.dart
+  - lib/presentation/screens/program_builder_screen.dart (with programId parameter)
+  - lib/presentation/screens/analytics_screen.dart
+  - lib/presentation/screens/settings_tab.dart
+  - lib/presentation/screens/connection_logs_screen.dart
+  - Each: Scaffold + AppBar + Center(Text)
+
+### Modified
+- **lib/main.dart**
+  - Changed MaterialApp to MaterialApp.router
+  - Added routerConfig: AppRouter.router
+  - Kept ProviderScope wrapper for Riverpod
+  - Basic Material 3 theme (placeholder, will integrate theme_provider in Task 4)
+
+- **pubspec.yaml**
+  - Added go_router: ^14.8.1
+
+### Verification
+- flutter analyze: 0 errors, 0 warnings
+- All routes defined and accessible
+- App builds and navigates correctly
+
+---
+
 ## [2025-11-12] - Phase 5 Task 2: Theme Provider Complete
 
 ### Session Summary
