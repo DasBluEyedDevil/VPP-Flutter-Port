@@ -31,11 +31,10 @@ final connectionStateProvider = StreamProvider<ConnectionState>((ref) {
 /// Ported from MainViewModel.kt BLE connection methods (lines 542-689)
 class BleConnectionNotifier extends StateNotifier<BleConnectionState> {
   final BleRepository _bleRepository;
-  final Ref _ref;
 
   StreamSubscription<ScanResult>? _scanSubscription;
 
-  BleConnectionNotifier(this._bleRepository, this._ref)
+  BleConnectionNotifier(this._bleRepository)
       : super(const BleConnectionState());
 
   /// Start scanning for BLE devices
@@ -237,7 +236,7 @@ class BleConnectionNotifier extends StateNotifier<BleConnectionState> {
 /// Provider for BLE connection notifier
 final bleConnectionProvider = StateNotifierProvider<BleConnectionNotifier, BleConnectionState>((ref) {
   final bleRepo = ref.watch(bleRepositoryProvider);
-  return BleConnectionNotifier(bleRepo, ref);
+  return BleConnectionNotifier(bleRepo);
 });
 
 /// Actions provider for BLE operations

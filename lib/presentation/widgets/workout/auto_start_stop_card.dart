@@ -45,7 +45,7 @@ class AutoStartStopCard extends StatelessWidget {
     final containerColor = switch ((autoStartCountdown, autoStopState.isActive, isActive, isIdle)) {
       (int _, _, _, _) => colorScheme.primaryContainer,
       (_, true, _, _) => colorScheme.errorContainer,
-      (_, _, true, _) => colorScheme.surfaceVariant,
+      (_, _, true, _) => colorScheme.surfaceContainerHighest,
       _ => colorScheme.tertiaryContainer,
     };
 

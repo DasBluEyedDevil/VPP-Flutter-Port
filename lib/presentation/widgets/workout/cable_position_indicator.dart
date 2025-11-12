@@ -84,7 +84,7 @@ class CablePositionIndicator extends StatelessWidget {
                   Container(
                     width: 40,
                     decoration: BoxDecoration(
-                      color: colorScheme.surfaceVariant,
+                      color: colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),

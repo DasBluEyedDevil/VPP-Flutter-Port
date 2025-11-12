@@ -8,11 +8,9 @@ import 'package:vpp_flutter_port/presentation/theme/colors.dart';
 void main() {
   group('CompactNumberPicker', () {
     testWidgets('displays current value with unit', (WidgetTester tester) async {
-      double? selectedValue;
-      
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
               value: 10.5,
@@ -20,7 +18,7 @@ void main() {
               max: 100.0,
               step: 0.5,
               unit: 'kg',
-              onChange: (value) => selectedValue = value,
+              onChange: (_) {},
             ),
           ),
         ),
@@ -32,7 +30,7 @@ void main() {
     testWidgets('displays value without unit when unit is null', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
               value: 10,
@@ -53,7 +51,7 @@ void main() {
       
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
               value: 10.0,
@@ -80,7 +78,7 @@ void main() {
       
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
               value: 10.0,
@@ -107,7 +105,7 @@ void main() {
       
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
               value: 0.0,
@@ -133,7 +131,7 @@ void main() {
       
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
               value: 100.0,
@@ -159,7 +157,7 @@ void main() {
       
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
               value: 10.0,
@@ -182,7 +180,7 @@ void main() {
     testWidgets('displays whole numbers without decimal point', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
               value: 10.0,
@@ -204,7 +202,7 @@ void main() {
       
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
               value: 10.0,
@@ -230,7 +228,7 @@ void main() {
     testWidgets('displays current value with unit', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: SizedBox(
               height: 250,
@@ -255,7 +253,7 @@ void main() {
       
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: SizedBox(
               height: 250,
@@ -287,7 +285,7 @@ void main() {
     testWidgets('enforces min bound', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: SizedBox(
               height: 250,
@@ -310,7 +308,7 @@ void main() {
     testWidgets('enforces max bound', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: SizedBox(
               height: 250,
@@ -333,7 +331,7 @@ void main() {
     testWidgets('supports decimal steps (0.5 increments)', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: SizedBox(
               height: 250,
@@ -357,7 +355,7 @@ void main() {
     testWidgets('displays whole numbers without decimal point', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: SizedBox(
               height: 250,
@@ -382,7 +380,7 @@ void main() {
       
       await tester.pumpWidget(
         MaterialApp(
-          theme: getAppTheme(darkColorScheme, Brightness.dark),
+          theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: SizedBox(
               height: 250,

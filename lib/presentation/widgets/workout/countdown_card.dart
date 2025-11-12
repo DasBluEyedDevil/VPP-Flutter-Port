@@ -59,7 +59,7 @@ class _CountdownCardState extends State<CountdownCard>
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            colorScheme.background,
+            colorScheme.surface,
             colorScheme.surface,
             colorScheme.surfaceContainerHighest,
           ],

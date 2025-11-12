@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/models/workout_state.dart';
 import '../../domain/models/connection_state.dart' as domain;
 import '../providers/workout_session_provider.dart';
 import '../providers/workout_session_state.dart';

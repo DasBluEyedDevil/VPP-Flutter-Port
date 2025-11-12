@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../domain/models/workout_state.dart';
 import '../../domain/models/connection_state.dart';
 import '../../domain/models/weight_unit.dart';
 import '../providers/workout_session_provider.dart';
@@ -12,7 +11,6 @@ import '../widgets/workout/countdown_card.dart';
 import '../widgets/workout/rest_timer_card.dart';
 import '../widgets/workout/set_summary_card.dart';
 import '../widgets/workout/cable_position_indicator.dart';
-import '../widgets/cards/stats_card.dart';
 import '../widgets/dialogs/connection_lost_dialog.dart';
 import '../navigation/routes.dart';
 

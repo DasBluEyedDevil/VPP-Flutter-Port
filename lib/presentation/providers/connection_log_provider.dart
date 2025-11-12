@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/daos/connection_log_dao.dart';
-import '../../data/database/tables/connection_logs.dart';
 
 /// Provider for AppDatabase instance (must be overridden in main.dart)
 final appDatabaseProvider = Provider<AppDatabase>((ref) {

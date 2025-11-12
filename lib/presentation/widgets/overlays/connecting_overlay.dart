@@ -36,14 +36,12 @@ class ConnectingOverlay extends StatefulWidget {
 }
 
 class _ConnectingOverlayState extends State<ConnectingOverlay> {
-  DateTime? _connectionStartTime;
   bool _showTimeoutMessage = false;
 
   @override
   void initState() {
     super.initState();
     if (widget.isConnecting) {
-      _connectionStartTime = DateTime.now();
       _checkTimeout();
     }
   }
@@ -53,12 +51,10 @@ class _ConnectingOverlayState extends State<ConnectingOverlay> {
     super.didUpdateWidget(oldWidget);
     if (widget.isConnecting && !oldWidget.isConnecting) {
       // Connection just started
-      _connectionStartTime = DateTime.now();
       _showTimeoutMessage = false;
       _checkTimeout();
     } else if (!widget.isConnecting && oldWidget.isConnecting) {
       // Connection finished
-      _connectionStartTime = null;
       _showTimeoutMessage = false;
     }
   }

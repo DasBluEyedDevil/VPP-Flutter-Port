@@ -26,7 +26,7 @@ class VitruvianBleManager {
       lineLength: 80,
       colors: true,
       printEmojis: false,
-      printTime: true,
+      dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
     ),
   );
 

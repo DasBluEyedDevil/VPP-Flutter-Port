@@ -122,7 +122,7 @@ class _RestTimerCardState extends State<RestTimerCard>
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            colorScheme.background,
+            colorScheme.surface,
             colorScheme.surface,
             colorScheme.surfaceContainerHighest,
           ],

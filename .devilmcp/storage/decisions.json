@@ -963,5 +963,40 @@
     "timestamp": "2025-11-12T11:33:29.953854",
     "outcome": null,
     "actual_impact": null
+  },
+  {
+    "id": 27,
+    "decision": "Clean up code quality issues (tests, unused code, deprecated APIs)",
+    "rationale": "User selected Option 2 to fix minor issues before hardware testing. Code quality improvements make the codebase more maintainable and reduce technical debt before moving to testing phase.",
+    "context": {
+      "tasks_completed": [
+        "Fixed 16 test errors in number_picker_test.dart (getAppTheme signature mismatch)",
+        "Removed 8 unused imports and variables",
+        "Replaced 5 deprecated APIs (surfaceVariant \u2192 surfaceContainerHighest, background \u2192 surface, printTime \u2192 dateTimeFormat)",
+        "Verified all 43 tests pass"
+      ],
+      "analyze_improvement": "39 issues \u2192 10 issues (74% reduction)",
+      "remaining_issues": [
+        "7 cosmetic info messages (naming conventions, string interpolation)",
+        "3 DropdownButtonFormField value deprecations (intentional for controlled forms)"
+      ],
+      "test_results": "43/43 tests passing (100%)"
+    },
+    "alternatives_considered": [
+      "Leave issues for later - rejected, cleanup now prevents future problems",
+      "Delegate to Cursor - rejected, simple refactoring not worth delegation overhead"
+    ],
+    "expected_impact": "Cleaner codebase with fewer warnings, all tests passing, ready for hardware testing phase.",
+    "risk_level": "low",
+    "tags": [
+      "code-quality",
+      "cleanup",
+      "tests",
+      "deprecated-apis",
+      "phase-5-polish"
+    ],
+    "timestamp": "2025-11-12T12:44:04.631376",
+    "outcome": null,
+    "actual_impact": null
   }
 ]
