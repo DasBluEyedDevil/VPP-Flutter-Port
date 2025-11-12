@@ -1,326 +1,372 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/connection_state.dart' as domain;
+import '../../domain/models/workout_mode.dart';
+import '../../domain/models/workout_type.dart';
+import '../../domain/models/program_mode.dart' as prog;
+import '../../domain/models/echo_level.dart';
+import '../../domain/models/eccentric_load.dart';
+import '../../domain/models/weight_unit.dart';
+import '../../domain/models/workout_parameters.dart';
+import '../../domain/models/workout_state.dart';
 import '../providers/workout_session_provider.dart';
 import '../providers/workout_session_state.dart';
 import '../providers/ble_connection_provider.dart';
+import '../providers/preferences_provider.dart';
+import '../theme/spacing.dart';
 import '../widgets/workout/cable_position_indicator.dart';
 import '../widgets/workout/auto_start_stop_card.dart';
+import '../widgets/workout/mode_selection_card.dart';
+import '../widgets/workout/eccentric_load_card.dart';
+import '../widgets/workout/echo_level_card.dart';
+import '../widgets/workout/active_status_card.dart';
+import '../widgets/inputs/compact_number_picker.dart';
+import '../widgets/overlays/connecting_overlay.dart';
+import '../widgets/dialogs/connection_error_dialog.dart';
 
-class JustLiftScreen extends ConsumerWidget {
+/// Just Lift screen - Quick workout configuration with auto-start/stop
+///
+/// Ported from Kotlin JustLiftScreen.kt (lines 1-850)
+/// Provides auto-start (grab handles) and auto-stop (rest 3s) functionality
+class JustLiftScreen extends ConsumerStatefulWidget {
   const JustLiftScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<JustLiftScreen> createState() => _JustLiftScreenState();
+}
+
+class _JustLiftScreenState extends ConsumerState<JustLiftScreen> {
+  // Local state for Just Lift configuration
+  WorkoutMode _selectedMode = const WorkoutMode.oldSchool();
+  double _weightPerCableKg = 20.0; // Default 20 kg
+  double _weightChangePerRepKg = 0.0;
+  EccentricLoad _eccentricLoad = EccentricLoad.load100;
+  EchoLevel _echoLevel = EchoLevel.harder;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize from current workout parameters if available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final workoutState = ref.read(workoutSessionProvider);
+      final params = workoutState.workoutParameters;
+      if (params.isJustLift) {
+        _updateFromParameters(params);
+      }
+    });
+  }
+
+  void _updateFromParameters(WorkoutParameters params) {
+    // Extract mode from workoutType
+    params.workoutType.when(
+      program: (mode) {
+        setState(() {
+          _selectedMode = switch (mode) {
+            prog.OldSchool() => const WorkoutMode.oldSchool(),
+            prog.Pump() => const WorkoutMode.pump(),
+            _ => const WorkoutMode.oldSchool(),
+          };
+          _weightPerCableKg = params.weightPerCableKg;
+          _weightChangePerRepKg = params.progressionRegressionKg;
+        });
+      },
+      echo: (level, eccentricLoad) {
+        setState(() {
+          _selectedMode = WorkoutMode.echo(level: level);
+          _eccentricLoad = eccentricLoad;
+          _echoLevel = level;
+        });
+      },
+    );
+  }
+
+  void _updateWorkoutParameters() {
+    final notifier = ref.read(workoutSessionProvider.notifier);
+    final currentState = ref.read(workoutSessionProvider);
+    final weightUnit = ref.read(weightUnitProvider);
+
+    // Convert display weight to kg if needed
+    final weightKg = weightUnit == WeightUnit.kg
+        ? _weightPerCableKg
+        : _weightPerCableKg / 2.20462;
+    final changeKg = weightUnit == WeightUnit.kg
+        ? _weightChangePerRepKg
+        : _weightChangePerRepKg / 2.20462;
+
+    // Convert WorkoutMode to WorkoutType
+    final workoutType = _selectedMode.toWorkoutType(
+      eccentricLoad: _eccentricLoad,
+    );
+
+    final newParams = currentState.workoutParameters.copyWith(
+      workoutType: workoutType,
+      weightPerCableKg: weightKg,
+      progressionRegressionKg: changeKg,
+      isJustLift: true,
+      useAutoStart: true,
+    );
+
+    // Update state via notifier (using internal state setter)
+    notifier.state = currentState.copyWith(workoutParameters: newParams);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final workoutState = ref.watch(workoutSessionProvider);
     final connectionStateAsync = ref.watch(connectionStateProvider);
+    final weightUnit = ref.watch(weightUnitProvider);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Just Lift'),
+    // Gradient background colors
+    final gradientColors = isDark
+        ? [
+            const Color(0xFF0F172A), // slate-900
+            const Color(0xFF1E1B4B), // indigo-950
+            const Color(0xFF172554), // blue-950
+          ]
+        : [
+            const Color(0xFFE0E7FF), // indigo-200
+            const Color(0xFFFCE7F3), // pink-100
+            const Color(0xFFDDD6FE), // violet-200
+          ];
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: gradientColors,
+        ),
       ),
-      body: connectionStateAsync.when(
-        data: (connState) => _buildBody(context, ref, workoutState, connState),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text('Just Lift'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: connectionStateAsync.when(
+          data: (connState) => _buildBody(
+            context,
+            workoutState,
+            connState,
+            weightUnit,
+            isDark,
+          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Error: $err')),
+        ),
       ),
     );
   }
 
   Widget _buildBody(
     BuildContext context,
-    WidgetRef ref,
     WorkoutSessionState workoutState,
     domain.ConnectionState connectionState,
+    WeightUnit weightUnit,
+    bool isDark,
   ) {
-    // Just Lift logic:
-    // - Shows "Grab handles to start" when idle
-    // - Auto-starts countdown when handles grabbed (auto-start timer)
-    // - Shows active workout view during reps
-    // - Auto-stops after 3s of no movement (auto-stop timer)
-    // - Returns to idle instead of summary (Just Lift special behavior)
+    final workoutStateValue = workoutState.workoutState;
+    final isActive = workoutStateValue is Active ||
+        workoutStateValue is Countdown ||
+        workoutStateValue is Resting;
+    final showPositionBars = isActive && workoutState.currentMetric != null;
 
-    if (connectionState is! domain.Connected) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.bluetooth_disabled, size: 80),
-            const SizedBox(height: 16),
-            const Text('Not connected to Vitruvian device'),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                final actions = ref.read(bleConnectionActionsProvider);
-                actions.ensureConnection(
-                  onConnected: () {},
-                  onFailed: () {},
-                );
-              },
-              child: const Text('Connect'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final state = workoutState.workoutState;
-    return state.when(
-      idle: () => _buildIdleView(context),
-      initializing: () => const Center(child: CircularProgressIndicator()),
-      countdown: (secondsRemaining) => _buildCountdownView(context, workoutState),
-      active: () => _buildActiveView(context, workoutState),
-      paused: () => const Center(child: Text('Paused')),
-      resting: (_, __, ___, ____, _____) => const Center(child: Text('Unexpected state')),
-      setSummary: (_, __, ___, ____) => _buildJustLiftSummary(context, ref, workoutState),
-      completed: () => const Center(child: Text('Completed')),
-      error: (message) => Center(child: Text('Error: $message')),
-    );
-  }
-
-  Widget _buildIdleView(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.back_hand_outlined,
-            size: 120,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Grab the handles to start',
-            style: Theme.of(context).textTheme.headlineSmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              'Workout will automatically begin when you pick up the handles',
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
+    return Stack(
+      children: [
+        // Left position bar (only when active)
+        if (showPositionBars)
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 40,
+            child: CablePositionIndicator(
+              label: 'L',
+              currentPosition: workoutState.currentMetric!.positionA,
+              isActive: true,
             ),
           ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildCountdownView(BuildContext context, WorkoutSessionState state) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: AutoStartStopCard(
-          workoutState: state.workoutState,
-          autoStartCountdown: state.autoStartCountdown,
-          autoStopState: state.autoStopState,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActiveView(BuildContext context, WorkoutSessionState state) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Cable position indicators
-          if (state.currentMetric != null)
-            SizedBox(
-              height: 200,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 80,
-                    height: 200,
-                    child: CablePositionIndicator(
-                      label: 'L',
-                      currentPosition: state.currentMetric!.positionA,
-                      isActive: true,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  SizedBox(
-                    width: 80,
-                    height: 200,
-                    child: CablePositionIndicator(
-                      label: 'R',
-                      currentPosition: state.currentMetric!.positionB,
-                      isActive: true,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          if (state.currentMetric != null) const SizedBox(height: 24),
-          // Current metrics
-          if (state.currentMetric != null) ...[
-            Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _MetricRow(
-                      'Load A',
-                      '${state.currentMetric!.loadA.toStringAsFixed(1)} N',
-                    ),
-                    const Divider(height: 16),
-                    _MetricRow(
-                      'Load B',
-                      '${state.currentMetric!.loadB.toStringAsFixed(1)} N',
-                    ),
-                    const Divider(height: 16),
-                    _MetricRow(
-                      'Total Load',
-                      '${state.currentMetric!.totalLoad.toStringAsFixed(1)} N',
-                    ),
-                    const Divider(height: 16),
-                    _MetricRow(
-                      'Power',
-                      '${state.currentMetric!.power.toStringAsFixed(0)} W',
-                    ),
-                  ],
+        // Center content (scrollable)
+        Positioned(
+          left: showPositionBars ? 56 : 0,
+          right: showPositionBars ? 56 : 0,
+          top: 0,
+          bottom: 0,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.large),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Auto-start/stop card
+                AutoStartStopCard(
+                  workoutState: workoutStateValue,
+                  autoStartCountdown: workoutState.autoStartCountdown,
+                  autoStopState: workoutState.autoStopState,
                 ),
-              ),
-            ),
-            const SizedBox(height: 32),
-          ],
 
-          // Rep counter
-          Text(
-            'Reps',
-            style: theme.textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${state.repCount.totalReps}',
-            style: TextStyle(
-              fontSize: 96,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.primary,
-            ),
-          ),
+                const SizedBox(height: AppSpacing.medium),
 
-          const SizedBox(height: 32),
+                // Mode selection
+                ModeSelectionCard(
+                  selectedMode: _selectedMode,
+                  onModeChanged: (mode) {
+                    setState(() => _selectedMode = mode);
+                    _updateWorkoutParameters();
+                  },
+                ),
 
-          // Auto-start/stop card
-          AutoStartStopCard(
-            workoutState: state.workoutState,
-            autoStartCountdown: state.autoStartCountdown,
-            autoStopState: state.autoStopState,
-          ),
-          const SizedBox(height: 32),
+                const SizedBox(height: AppSpacing.medium),
 
-          Text(
-            'Set will auto-complete when you stop moving',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildJustLiftSummary(BuildContext context, WidgetRef ref, WorkoutSessionState state) {
-    // Show set summary, then auto-return to idle after 3s
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(seconds: 3), () {
-        if (context.mounted) {
-          // Just Lift special: reset to idle (proceedFromSummary does this for Just Lift)
-          ref.read(workoutSessionProvider.notifier).proceedFromSummary();
-        }
-      });
-    });
-
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.check_circle,
-            size: 80,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Set Complete!',
-            style: theme.textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 24),
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 32),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _SummaryRow('Reps', '${state.repCount.totalReps}'),
-                  const Divider(height: 16),
-                  _SummaryRow(
-                    'Total Metrics',
-                    '${state.collectedMetrics.length} samples',
+                // Conditional: Old School / Pump configuration
+                if (!_selectedMode.map(
+                  oldSchool: (_) => false,
+                  pump: (_) => false,
+                  tut: (_) => false,
+                  tutBeast: (_) => false,
+                  eccentricOnly: (_) => false,
+                  echo: (_) => true,
+                )) ...[
+                  CompactNumberPicker(
+                    label: 'Weight per Cable',
+                    value: _getDisplayWeight(_weightPerCableKg, weightUnit),
+                    min: 1,
+                    max: weightUnit == WeightUnit.kg ? 100 : 220,
+                    suffix: weightUnit == WeightUnit.kg ? 'kg' : 'lbs',
+                    onChanged: (value) {
+                      setState(() {
+                        _weightPerCableKg = weightUnit == WeightUnit.kg
+                            ? value.toDouble()
+                            : value / 2.20462;
+                      });
+                      _updateWorkoutParameters();
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.medium),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CompactNumberPicker(
+                        label: 'Weight Change Per Rep',
+                        value: _getDisplayWeight(_weightChangePerRepKg, weightUnit),
+                        min: -10,
+                        max: 10,
+                        suffix: weightUnit == WeightUnit.kg ? 'kg' : 'lbs',
+                        onChanged: (value) {
+                          setState(() {
+                            _weightChangePerRepKg = weightUnit == WeightUnit.kg
+                                ? value.toDouble()
+                                : value / 2.20462;
+                          });
+                          _updateWorkoutParameters();
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.small),
+                      Text(
+                        'Negative = Regression, Positive = Progression',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            'Returning to idle...',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _MetricRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+                // Conditional: Echo configuration
+                if (_selectedMode.map(
+                  oldSchool: (_) => false,
+                  pump: (_) => false,
+                  tut: (_) => false,
+                  tutBeast: (_) => false,
+                  eccentricOnly: (_) => false,
+                  echo: (_) => true,
+                )) ...[
+                  EccentricLoadCard(
+                    eccentricLoad: _eccentricLoad,
+                    onChanged: (load) {
+                      setState(() => _eccentricLoad = load);
+                      _updateWorkoutParameters();
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.medium),
+                  EchoLevelCard(
+                    selectedLevel: _echoLevel,
+                    onChanged: (level) {
+                      setState(() {
+                        _echoLevel = level;
+                        _selectedMode = WorkoutMode.echo(level: level);
+                      });
+                      _updateWorkoutParameters();
+                    },
+                  ),
+                ],
+
+                // Conditional: Active status card
+                if (isActive) ...[
+                  const SizedBox(height: AppSpacing.medium),
+                  const Divider(),
+                  const SizedBox(height: AppSpacing.medium),
+                  ActiveStatusCard(
+                    workoutState: workoutStateValue,
+                    totalReps: workoutState.repCount.totalReps,
+                    currentLoad: workoutState.currentMetric?.totalLoad ?? 0.0,
+                    weightUnit: weightUnit,
+                    onStop: () {
+                      ref.read(workoutSessionProvider.notifier).stopWorkout();
+                    },
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
+
+        // Right position bar (only when active)
+        if (showPositionBars)
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: 40,
+            child: CablePositionIndicator(
+              label: 'R',
+              currentPosition: workoutState.currentMetric!.positionB,
+              isActive: true,
+            ),
+          ),
+
+        // Overlays
+        if (connectionState is domain.Connecting)
+          ConnectingOverlay(
+            isConnecting: true,
+            onCancel: () {
+              final actions = ref.read(bleConnectionActionsProvider);
+              actions.disconnect();
+            },
+          ),
+        if (connectionState is domain.ConnectionError)
+          ConnectionErrorDialog(
+            errorMessage: (connectionState as domain.ConnectionError).message,
+            onRetry: () {
+              final actions = ref.read(bleConnectionActionsProvider);
+              actions.ensureConnection(onConnected: () {}, onFailed: () {});
+            },
+            onCancel: () {
+              // Error state will clear automatically
+            },
+          ),
       ],
     );
   }
 
-  Widget _SummaryRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-      ],
-    );
+  int _getDisplayWeight(double weightKg, WeightUnit unit) {
+    return unit == WeightUnit.kg
+        ? weightKg.round()
+        : (weightKg * 2.20462).round();
   }
 }

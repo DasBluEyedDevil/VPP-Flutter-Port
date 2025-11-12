@@ -62,11 +62,20 @@ class AutoStartStopCard extends StatelessWidget {
 
     // Determine title text
     final titleText = switch ((autoStartCountdown, autoStopState.isActive, isActive, isIdle)) {
-      (int countdown, _, _, _) => 'Starting in $countdown...',
+      (int countdown, _, _, _) => 'Starting...',
       (_, true, _, _) => 'Stopping in ${autoStopState.secondsRemaining}s...',
       (_, _, true, _) => 'Auto-Stop Ready',
       _ => 'Auto-Start Ready',
     };
+
+    // Determine instruction text
+    final instructionText = isIdle
+        ? 'Grab and hold handles briefly (~1s) to start'
+        : 'Put handles down for 3 seconds to stop';
+
+    // Show progress bar for countdown states
+    final showProgress = autoStartCountdown != null || autoStopState.isActive;
+    final isIndeterminate = autoStartCountdown != null;
 
     return Card(
       color: containerColor,
@@ -80,21 +89,51 @@ class AutoStartStopCard extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.medium),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 32,
-              color: textColor,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 32,
+                  color: textColor,
+                ),
+                const SizedBox(width: AppSpacing.small),
+                Text(
+                  titleText,
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: AppSpacing.small),
+            if (showProgress) ...[
+              const SizedBox(height: AppSpacing.medium),
+              SizedBox(
+                height: 8,
+                child: isIndeterminate
+                    ? LinearProgressIndicator(
+                        backgroundColor: textColor.withValues(alpha: 0.2),
+                        valueColor: AlwaysStoppedAnimation<Color>(textColor),
+                      )
+                    : LinearProgressIndicator(
+                        value: autoStopState.progress.clamp(0.0, 1.0),
+                        backgroundColor: textColor.withValues(alpha: 0.2),
+                        valueColor: AlwaysStoppedAnimation<Color>(textColor),
+                      ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.small),
             Text(
-              titleText,
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+              instructionText,
+              style: textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
                 color: textColor,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
