@@ -20,14 +20,13 @@ import '../../domain/services/metrics_calculator.dart';
 import 'workout_session_state.dart';
 import 'preferences_provider.dart';
 import 'haptic_provider.dart';
+import 'ble_connection_provider.dart' show bleRepositoryProvider;
 
 final logger = Logger();
 const _uuid = Uuid();
 
-/// Provider for BLE repository (must be overridden in main.dart)
-final bleRepositoryProvider = Provider<BleRepository>((ref) {
-  throw UnimplementedError('bleRepositoryProvider must be overridden');
-});
+// Import bleRepositoryProvider from ble_connection_provider.dart
+// (avoid duplicate declaration)
 
 /// Provider for workout repository (must be overridden in main.dart)
 final workoutRepositoryProvider = Provider<WorkoutRepository>((ref) {
