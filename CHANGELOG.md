@@ -6,6 +6,129 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2025-11-12] - Phase 5 Task 6: Input Widgets Complete
+
+### Session Summary
+- **Duration:** 10 minutes
+- **Phase:** Phase 5.2 - UI Layer Reusable Widgets (Input Components)
+- **Status:** Task 6 complete - Number picker widgets implemented and tested
+- **Files:** 3 files created (2 widgets + 1 test file with 16 tests)
+- **Approach:** Delegated to Cursor CLI via Quadrumvirate workflow
+- **Commit:** 2f6dffc
+
+### Added
+- **lib/presentation/widgets/inputs/compact_number_picker.dart** (231 lines)
+  - Inline number stepper widget with [−] value unit [+] layout
+  - Props: value, min, max, step, unit, onChange, enabled, semanticLabel
+  - Haptic feedback on button taps (HapticFeedback.selectionClick())
+  - Debouncing (150ms) for rapid taps
+  - Min/max bounds enforcement (buttons disabled at boundaries)
+  - Decimal step support (e.g., 0.5 kg increments)
+  - Whole numbers display without ".0" (10 instead of 10.0)
+  - Accessibility labels and semantic support
+  - Material 3 styling with theme colors
+
+- **lib/presentation/widgets/inputs/custom_number_picker.dart** (258 lines)
+  - Scrollable wheel picker using ListWheelScrollView
+  - Props: value, min, max, step, unit, itemHeight, visibleItems, onChange, enabled, semanticLabel
+  - FixedExtentScrollController with snap to valid values
+  - Highlight selected item with border and bold text (fontSize 24 vs 18)
+  - Primary color for selected value, 60% opacity for non-selected
+  - Min/max bounds enforcement via generated values list
+  - Decimal step support with proper rounding
+  - Smooth scrolling with 200ms animation curve
+  - Haptic feedback on value change
+
+- **test/presentation/widgets/inputs/number_picker_test.dart** (411 lines)
+  - 9 tests for CompactNumberPicker:
+    - Display value with/without unit
+    - Increment/decrement buttons
+    - Min/max bounds enforcement
+    - Decimal step support (0.5 increments)
+    - Whole number formatting
+    - Disabled state behavior
+  - 7 tests for CustomNumberPicker:
+    - Display value with unit
+    - Scroll onChange callback
+    - Min/max bounds enforcement
+    - Decimal step support (0.5 increments)
+    - Whole number formatting
+    - Disabled scrolling behavior
+  - All 16 tests passing
+
+### Fixed
+- Replaced deprecated withOpacity() with withValues(alpha:) in both widgets
+- Replaced deprecated surfaceVariant with surfaceContainerHighest
+- Removed unused import (spacing.dart) from custom_number_picker.dart
+- Fixed indexWhere orElse parameter (not available in Dart) - replaced with manual -1 check
+
+### Verification
+- flutter analyze lib/presentation/widgets/inputs/: 0 issues
+- flutter test test/presentation/widgets/inputs/: 16/16 tests passing
+- Both widgets support decimal steps (0.5 kg increments)
+- Min/max bounds properly enforced
+- Haptic feedback working
+- Debouncing prevents rapid-tap issues
+
+### Next Steps
+- Task 7: Workout Widgets (CountdownCard, RestTimerCard, SetSummaryCard)
+- Continue Sub-Phase 5.2: Reusable Widget Library
+
+---
+
+## [2025-11-12] - Phase 5 Task 5: Common Widgets Complete
+
+### Session Summary
+- **Duration:** 15 minutes
+- **Phase:** Phase 5.2 - UI Layer Reusable Widgets (Common Components)
+- **Status:** Task 5 complete - Common widgets implemented and tested
+- **Files:** 4 files created (3 widgets + 1 test file)
+- **Approach:** Delegated to Cursor CLI via Quadrumvirate workflow
+- **Commit:** 426b20f
+
+### Added
+- **lib/presentation/widgets/cards/stats_card.dart** (71 lines)
+  - Reusable statistics card component
+  - Props: label, value, icon, iconColor, onTap (optional)
+  - Material 3 Card with 12dp border radius, 2dp elevation
+  - Compact layout with icon, value, and label
+
+- **lib/presentation/widgets/common/empty_state.dart** (84 lines)
+  - Empty state placeholder component
+  - Props: icon (default: fitness_center), title, message, actionLabel, onAction
+  - Centered layout with 64px icon, title, message, optional action button
+  - Theme-aware colors
+
+- **lib/presentation/widgets/banners/connection_status_banner.dart** (112 lines)
+  - BLE connection status banner using Riverpod
+  - ConsumerWidget watching connectionStateProvider
+  - Shows different messages for: Scanning, Connecting, Connected (hidden), Disconnected, Error
+  - Color-coded status (primary for scanning/connecting, error for disconnected/failed)
+  - Optional Connect button when disconnected/error
+  - Auto-dismisses when connected (returns SizedBox.shrink)
+
+- **test/presentation/widgets/common/empty_state_test.dart** (98 lines)
+  - 6 widget tests for EmptyState component
+  - Tests: title/message display, custom icon, action button conditional rendering, default icon
+  - All tests passing
+
+### Fixed
+- Removed unused import (spacing.dart) from stats_card.dart
+- Replaced deprecated surfaceVariant with surfaceContainerHighest
+- Replaced deprecated withOpacity() with withValues(alpha:) in empty_state.dart
+
+### Verification
+- flutter analyze lib/presentation/widgets/: 0 issues
+- flutter test test/presentation/widgets/: 6/6 tests passing
+- All widgets follow Material 3 design guidelines
+- Riverpod integration verified in ConnectionStatusBanner
+
+### Next Steps
+- Task 6: Input Widgets (CompactNumberPicker, CustomNumberPicker)
+- Continue Sub-Phase 5.2: Reusable Widget Library
+
+---
+
 ## [2025-11-12] - Phase 5 Task 4: App Integration Complete
 
 ### Session Summary
