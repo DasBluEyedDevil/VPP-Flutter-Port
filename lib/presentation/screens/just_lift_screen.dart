@@ -5,6 +5,8 @@ import '../../domain/models/connection_state.dart' as domain;
 import '../providers/workout_session_provider.dart';
 import '../providers/workout_session_state.dart';
 import '../providers/ble_connection_provider.dart';
+import '../widgets/workout/cable_position_indicator.dart';
+import '../widgets/workout/auto_start_stop_card.dart';
 
 class JustLiftScreen extends ConsumerWidget {
   const JustLiftScreen({super.key});
@@ -108,25 +110,14 @@ class JustLiftScreen extends ConsumerWidget {
   }
 
   Widget _buildCountdownView(BuildContext context, WorkoutSessionState state) {
-    final countdown = state.autoStartCountdown ?? 3;
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Get Ready!',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            '$countdown',
-            style: TextStyle(
-              fontSize: 120,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: AutoStartStopCard(
+          workoutState: state.workoutState,
+          autoStartCountdown: state.autoStartCountdown,
+          autoStopState: state.autoStopState,
+        ),
       ),
     );
   }
@@ -139,6 +130,36 @@ class JustLiftScreen extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          // Cable position indicators
+          if (state.currentMetric != null)
+            SizedBox(
+              height: 200,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 80,
+                    height: 200,
+                    child: CablePositionIndicator(
+                      label: 'L',
+                      currentPosition: state.currentMetric!.positionA,
+                      isActive: true,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    width: 80,
+                    height: 200,
+                    child: CablePositionIndicator(
+                      label: 'R',
+                      currentPosition: state.currentMetric!.positionB,
+                      isActive: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (state.currentMetric != null) const SizedBox(height: 24),
           // Current metrics
           if (state.currentMetric != null) ...[
             Card(
@@ -190,25 +211,13 @@ class JustLiftScreen extends ConsumerWidget {
 
           const SizedBox(height: 32),
 
-          // Auto-stop indicator
-          if (state.autoStopState.isActive) ...[
-            CircularProgressIndicator(
-              value: state.autoStopState.progress,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Auto-stopping in ${state.autoStopState.secondsRemaining}s',
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Continue moving to cancel',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-            const SizedBox(height: 32),
-          ],
+          // Auto-start/stop card
+          AutoStartStopCard(
+            workoutState: state.workoutState,
+            autoStartCountdown: state.autoStartCountdown,
+            autoStopState: state.autoStopState,
+          ),
+          const SizedBox(height: 32),
 
           Text(
             'Set will auto-complete when you stop moving',

@@ -11,6 +11,7 @@ import '../providers/preferences_provider.dart';
 import '../widgets/workout/countdown_card.dart';
 import '../widgets/workout/rest_timer_card.dart';
 import '../widgets/workout/set_summary_card.dart';
+import '../widgets/workout/cable_position_indicator.dart';
 import '../widgets/cards/stats_card.dart';
 import '../widgets/dialogs/connection_lost_dialog.dart';
 import '../navigation/routes.dart';
@@ -87,6 +88,36 @@ class ActiveWorkoutScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Cable position indicators
+          if (state.currentMetric != null)
+            SizedBox(
+              height: 200,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 80,
+                    height: 200,
+                    child: CablePositionIndicator(
+                      label: 'L',
+                      currentPosition: state.currentMetric!.positionA,
+                      isActive: true,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    width: 80,
+                    height: 200,
+                    child: CablePositionIndicator(
+                      label: 'R',
+                      currentPosition: state.currentMetric!.positionB,
+                      isActive: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (state.currentMetric != null) const SizedBox(height: 24),
           // Current metrics display
           Text('Current Set', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 16),
