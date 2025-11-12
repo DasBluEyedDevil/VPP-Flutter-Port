@@ -177,17 +177,12 @@ class WorkoutRepository {
 
   /// Get all weekly programs with their assigned days
   Stream<List<WeeklyProgramWithDays>> getAllPrograms() {
-    // TODO: Add watchAllProgramsWithDays() to WorkoutDao for reactive stream
-    // For now, convert Future to Stream
-    return Stream.fromFuture(_workoutDao.getWeeklyProgramsWithDays());
+    return _workoutDao.watchWeeklyProgramsWithDays();
   }
 
   /// Get the currently active program with its days
-  /// 
-  /// TODO: Add isActive field to WeeklyPrograms table and implement getActiveProgramWithDays in DAO
   Stream<WeeklyProgramWithDays?> getActiveProgram() {
-    // TODO: Implement when isActive field is added
-    return Stream.value(null);
+    return _workoutDao.watchActiveProgramWithDays();
   }
 
   /// Get a specific program by ID with its days
@@ -213,6 +208,7 @@ class WorkoutRepository {
             name: Value(programWithDays.program.name),
             createdAt: Value(programWithDays.program.createdAt),
             lastUsed: Value(programWithDays.program.lastUsed),
+            isActive: Value(programWithDays.program.isActive),
           ),
         );
         
@@ -229,6 +225,7 @@ class WorkoutRepository {
             name: programWithDays.program.name,
             createdAt: programWithDays.program.createdAt,
             lastUsed: programWithDays.program.lastUsed,
+            isActive: programWithDays.program.isActive,
           ),
         );
       }
@@ -265,16 +262,26 @@ class WorkoutRepository {
   }
 
   /// Activate a weekly program (deactivates all others)
-  /// 
-  /// TODO: Add isActive field to WeeklyPrograms table and implement activateProgram in DAO
   Future<Either<Exception, void>> activateProgram(String programId) async {
     try {
-      // TODO: Implement when isActive field is added
-      // await _workoutDao.activateProgram(programId);
+      await _workoutDao.deactivateAllPrograms();
+      await _workoutDao.activateProgram(programId);
       logger.d("Activated weekly program: $programId");
       return right(null);
     } catch (e) {
       logger.e("Failed to activate weekly program", error: e);
+      return left(e as Exception);
+    }
+  }
+
+  /// Deactivate all weekly programs
+  Future<Either<Exception, void>> deactivateAllPrograms() async {
+    try {
+      await _workoutDao.deactivateAllPrograms();
+      logger.d("Deactivated all weekly programs");
+      return right(null);
+    } catch (e) {
+      logger.e("Failed to deactivate all weekly programs", error: e);
       return left(e as Exception);
     }
   }

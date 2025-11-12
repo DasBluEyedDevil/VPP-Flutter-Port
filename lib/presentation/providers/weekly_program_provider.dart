@@ -41,6 +41,10 @@ class WeeklyProgramActions {
   Future<void> activateProgram(String programId) async {
     await _repo.activateProgram(programId);
   }
+
+  Future<void> deactivateAll() async {
+    await _repo.deactivateAllPrograms();
+  }
 }
 
 /// Provider for a specific program by ID

@@ -242,4 +242,53 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
           ..orderBy([(t) => OrderingTerm.asc(t.dayOfWeek)]))
         .watch();
   }
+
+  /// Deactivate all weekly programs
+  Future<int> deactivateAllPrograms() {
+    return (update(weeklyPrograms)..where((t) => t.isActive.equals(true)))
+        .write(const WeeklyProgramsCompanion(isActive: Value(false)));
+  }
+
+  /// Activate a specific program (should be called after deactivateAll)
+  Future<bool> activateProgram(String programId) {
+    return (update(weeklyPrograms)..where((t) => t.id.equals(programId)))
+        .write(const WeeklyProgramsCompanion(isActive: Value(true)));
+  }
+
+  /// Watch all weekly programs with days (reactive stream)
+  Stream<List<WeeklyProgramWithDays>> watchWeeklyProgramsWithDays() {
+    return watchWeeklyPrograms().asyncMap((programs) async {
+      final allProgramDays = await (select(programDays)).get();
+      return programs.map((program) {
+        final days = allProgramDays
+            .where((day) => day.programId == program.id)
+            .toList();
+        return WeeklyProgramWithDays(program: program, days: days);
+      }).toList();
+    });
+  }
+
+  /// Get active program with days
+  Future<WeeklyProgramWithDays?> getActiveProgramWithDays() async {
+    final activeProgram = await (select(weeklyPrograms)
+          ..where((t) => t.isActive.equals(true)))
+        .getSingleOrNull();
+    
+    if (activeProgram == null) return null;
+
+    final days = await getProgramDaysForProgram(activeProgram.id);
+    return WeeklyProgramWithDays(program: activeProgram, days: days);
+  }
+
+  /// Watch active program with days (reactive stream)
+  Stream<WeeklyProgramWithDays?> watchActiveProgramWithDays() {
+    return (select(weeklyPrograms)..where((t) => t.isActive.equals(true)))
+        .watch()
+        .asyncMap((programs) async {
+          if (programs.isEmpty) return null;
+          final program = programs.first;
+          final days = await getProgramDaysForProgram(program.id);
+          return WeeklyProgramWithDays(program: program, days: days);
+        });
+  }
 }

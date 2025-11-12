@@ -9,7 +9,7 @@ class ProgramDays extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get programId => text().references(WeeklyPrograms, #id, onDelete: KeyAction.cascade)();
   TextColumn get routineId => text().references(Routines, #id, onDelete: KeyAction.cascade)();
-  IntColumn get dayOfWeek => integer()(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+  IntColumn get dayOfWeek => integer()(); // 1=Monday, 2=Tuesday, ..., 7=Sunday (ISO-8601, matches DateTime.weekday)
 
   Set<Index> get customIndexes => {
     Index('idx_program_days_program_id', 'CREATE INDEX idx_program_days_program_id ON program_days (program_id)'),

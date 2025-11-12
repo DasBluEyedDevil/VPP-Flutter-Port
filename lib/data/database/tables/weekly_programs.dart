@@ -6,6 +6,7 @@ class WeeklyPrograms extends Table {
   TextColumn get name => text()();
   Int64Column get createdAt => int64()();
   Int64Column get lastUsed => int64()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};

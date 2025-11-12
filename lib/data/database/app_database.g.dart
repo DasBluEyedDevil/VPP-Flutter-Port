@@ -3783,8 +3783,29 @@ class $WeeklyProgramsTable extends WeeklyPrograms
     type: DriftSqlType.bigInt,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, name, createdAt, lastUsed];
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    createdAt,
+    lastUsed,
+    isActive,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3826,6 +3847,12 @@ class $WeeklyProgramsTable extends WeeklyPrograms
     } else if (isInserting) {
       context.missing(_lastUsedMeta);
     }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
     return context;
   }
 
@@ -3851,6 +3878,10 @@ class $WeeklyProgramsTable extends WeeklyPrograms
         DriftSqlType.bigInt,
         data['${effectivePrefix}last_used'],
       )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
     );
   }
 
@@ -3865,11 +3896,13 @@ class WeeklyProgram extends DataClass implements Insertable<WeeklyProgram> {
   final String name;
   final BigInt createdAt;
   final BigInt lastUsed;
+  final bool isActive;
   const WeeklyProgram({
     required this.id,
     required this.name,
     required this.createdAt,
     required this.lastUsed,
+    required this.isActive,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3878,6 +3911,7 @@ class WeeklyProgram extends DataClass implements Insertable<WeeklyProgram> {
     map['name'] = Variable<String>(name);
     map['created_at'] = Variable<BigInt>(createdAt);
     map['last_used'] = Variable<BigInt>(lastUsed);
+    map['is_active'] = Variable<bool>(isActive);
     return map;
   }
 
@@ -3887,6 +3921,7 @@ class WeeklyProgram extends DataClass implements Insertable<WeeklyProgram> {
       name: Value(name),
       createdAt: Value(createdAt),
       lastUsed: Value(lastUsed),
+      isActive: Value(isActive),
     );
   }
 
@@ -3900,6 +3935,7 @@ class WeeklyProgram extends DataClass implements Insertable<WeeklyProgram> {
       name: serializer.fromJson<String>(json['name']),
       createdAt: serializer.fromJson<BigInt>(json['createdAt']),
       lastUsed: serializer.fromJson<BigInt>(json['lastUsed']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
     );
   }
   @override
@@ -3910,6 +3946,7 @@ class WeeklyProgram extends DataClass implements Insertable<WeeklyProgram> {
       'name': serializer.toJson<String>(name),
       'createdAt': serializer.toJson<BigInt>(createdAt),
       'lastUsed': serializer.toJson<BigInt>(lastUsed),
+      'isActive': serializer.toJson<bool>(isActive),
     };
   }
 
@@ -3918,11 +3955,13 @@ class WeeklyProgram extends DataClass implements Insertable<WeeklyProgram> {
     String? name,
     BigInt? createdAt,
     BigInt? lastUsed,
+    bool? isActive,
   }) => WeeklyProgram(
     id: id ?? this.id,
     name: name ?? this.name,
     createdAt: createdAt ?? this.createdAt,
     lastUsed: lastUsed ?? this.lastUsed,
+    isActive: isActive ?? this.isActive,
   );
   WeeklyProgram copyWithCompanion(WeeklyProgramsCompanion data) {
     return WeeklyProgram(
@@ -3930,6 +3969,7 @@ class WeeklyProgram extends DataClass implements Insertable<WeeklyProgram> {
       name: data.name.present ? data.name.value : this.name,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       lastUsed: data.lastUsed.present ? data.lastUsed.value : this.lastUsed,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
     );
   }
 
@@ -3939,13 +3979,14 @@ class WeeklyProgram extends DataClass implements Insertable<WeeklyProgram> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('createdAt: $createdAt, ')
-          ..write('lastUsed: $lastUsed')
+          ..write('lastUsed: $lastUsed, ')
+          ..write('isActive: $isActive')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, createdAt, lastUsed);
+  int get hashCode => Object.hash(id, name, createdAt, lastUsed, isActive);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3953,7 +3994,8 @@ class WeeklyProgram extends DataClass implements Insertable<WeeklyProgram> {
           other.id == this.id &&
           other.name == this.name &&
           other.createdAt == this.createdAt &&
-          other.lastUsed == this.lastUsed);
+          other.lastUsed == this.lastUsed &&
+          other.isActive == this.isActive);
 }
 
 class WeeklyProgramsCompanion extends UpdateCompanion<WeeklyProgram> {
@@ -3961,12 +4003,14 @@ class WeeklyProgramsCompanion extends UpdateCompanion<WeeklyProgram> {
   final Value<String> name;
   final Value<BigInt> createdAt;
   final Value<BigInt> lastUsed;
+  final Value<bool> isActive;
   final Value<int> rowid;
   const WeeklyProgramsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastUsed = const Value.absent(),
+    this.isActive = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   WeeklyProgramsCompanion.insert({
@@ -3974,6 +4018,7 @@ class WeeklyProgramsCompanion extends UpdateCompanion<WeeklyProgram> {
     required String name,
     required BigInt createdAt,
     required BigInt lastUsed,
+    this.isActive = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -3984,6 +4029,7 @@ class WeeklyProgramsCompanion extends UpdateCompanion<WeeklyProgram> {
     Expression<String>? name,
     Expression<BigInt>? createdAt,
     Expression<BigInt>? lastUsed,
+    Expression<bool>? isActive,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3991,6 +4037,7 @@ class WeeklyProgramsCompanion extends UpdateCompanion<WeeklyProgram> {
       if (name != null) 'name': name,
       if (createdAt != null) 'created_at': createdAt,
       if (lastUsed != null) 'last_used': lastUsed,
+      if (isActive != null) 'is_active': isActive,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4000,6 +4047,7 @@ class WeeklyProgramsCompanion extends UpdateCompanion<WeeklyProgram> {
     Value<String>? name,
     Value<BigInt>? createdAt,
     Value<BigInt>? lastUsed,
+    Value<bool>? isActive,
     Value<int>? rowid,
   }) {
     return WeeklyProgramsCompanion(
@@ -4007,6 +4055,7 @@ class WeeklyProgramsCompanion extends UpdateCompanion<WeeklyProgram> {
       name: name ?? this.name,
       createdAt: createdAt ?? this.createdAt,
       lastUsed: lastUsed ?? this.lastUsed,
+      isActive: isActive ?? this.isActive,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4026,6 +4075,9 @@ class WeeklyProgramsCompanion extends UpdateCompanion<WeeklyProgram> {
     if (lastUsed.present) {
       map['last_used'] = Variable<BigInt>(lastUsed.value);
     }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4039,6 +4091,7 @@ class WeeklyProgramsCompanion extends UpdateCompanion<WeeklyProgram> {
           ..write('name: $name, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastUsed: $lastUsed, ')
+          ..write('isActive: $isActive, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7434,6 +7487,7 @@ typedef $$WeeklyProgramsTableCreateCompanionBuilder =
       required String name,
       required BigInt createdAt,
       required BigInt lastUsed,
+      Value<bool> isActive,
       Value<int> rowid,
     });
 typedef $$WeeklyProgramsTableUpdateCompanionBuilder =
@@ -7442,6 +7496,7 @@ typedef $$WeeklyProgramsTableUpdateCompanionBuilder =
       Value<String> name,
       Value<BigInt> createdAt,
       Value<BigInt> lastUsed,
+      Value<bool> isActive,
       Value<int> rowid,
     });
 
@@ -7504,6 +7559,11 @@ class $$WeeklyProgramsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
   Expression<bool> programDaysRefs(
     Expression<bool> Function($$ProgramDaysTableFilterComposer f) f,
   ) {
@@ -7558,6 +7618,11 @@ class $$WeeklyProgramsTableOrderingComposer
     column: $table.lastUsed,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$WeeklyProgramsTableAnnotationComposer
@@ -7580,6 +7645,9 @@ class $$WeeklyProgramsTableAnnotationComposer
 
   GeneratedColumn<BigInt> get lastUsed =>
       $composableBuilder(column: $table.lastUsed, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
 
   Expression<T> programDaysRefs<T extends Object>(
     Expression<T> Function($$ProgramDaysTableAnnotationComposer a) f,
@@ -7641,12 +7709,14 @@ class $$WeeklyProgramsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<BigInt> createdAt = const Value.absent(),
                 Value<BigInt> lastUsed = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => WeeklyProgramsCompanion(
                 id: id,
                 name: name,
                 createdAt: createdAt,
                 lastUsed: lastUsed,
+                isActive: isActive,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7655,12 +7725,14 @@ class $$WeeklyProgramsTableTableManager
                 required String name,
                 required BigInt createdAt,
                 required BigInt lastUsed,
+                Value<bool> isActive = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => WeeklyProgramsCompanion.insert(
                 id: id,
                 name: name,
                 createdAt: createdAt,
                 lastUsed: lastUsed,
+                isActive: isActive,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

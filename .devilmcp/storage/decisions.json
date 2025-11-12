@@ -1084,5 +1084,50 @@
     "timestamp": "2025-11-12T14:36:57.632658",
     "outcome": null,
     "actual_impact": null
+  },
+  {
+    "id": 30,
+    "decision": "Analyze Programs Tab screen (two-screen system: list + builder) before implementation",
+    "rationale": "Following Quadrumvirate workflow for screen 7/16. Programs Tab is more complex than Routines Tab - has two screens (WeeklyProgramsScreen list view + ProgramBuilderScreen 7-day editor), active program logic (only one active), and today's workout detection. Extreme detail analysis ensures both screens match Kotlin pixel-perfect.",
+    "context": {
+      "screen": "Programs Tab (7/16)",
+      "phase": "UI Exact Matching",
+      "approach": "Gemini extreme detail analysis",
+      "output_document": "PROGRAMS_TAB_ANALYSIS.md",
+      "document_size": "1000+ lines, 16 sections",
+      "source_files_analyzed": [
+        "WeeklyProgramsScreen.kt (469 lines)",
+        "ProgramBuilderScreen.kt (476 lines)",
+        "WeeklyProgramEntity.kt",
+        "ProgramDayEntity.kt"
+      ],
+      "key_findings": {
+        "two_screen_system": "List view + 7-day schedule editor",
+        "active_program_logic": "Only ONE program can be active at a time",
+        "todays_workout_detection": "DayOfWeek.value (1-7) matches Dart DateTime.weekday",
+        "day_mapping": "MONDAY=1...SUNDAY=7 (exact match Kotlin\u2192Dart)",
+        "ui_simpler_than_routines": "No spring animations, text-only list items, separate editor screen"
+      },
+      "differences_from_routines": "Simpler interactions, activate/active badge (not duplicate), no gradient icon boxes, ProgramBuilder separate screen",
+      "next_step": "Create implementation brief for both screens, delegate to Cursor",
+      "workflow_status": "Analysis complete, ready for implementation"
+    },
+    "alternatives_considered": [
+      "Implement only list view first (rejected: builder screen needed for functionality)",
+      "Use dialog for builder (rejected: Kotlin uses full screen)",
+      "Skip active program logic (rejected: core feature)"
+    ],
+    "expected_impact": "Cursor CLI will have complete specification to create pixel-perfect Flutter implementation of both Programs screens. Critical active program logic and day mapping documented. All UI elements, colors, spacing, interactions specified for exact match.",
+    "risk_level": "medium",
+    "tags": [
+      "ui-matching",
+      "programs-tab",
+      "analysis",
+      "screen-7",
+      "two-screens"
+    ],
+    "timestamp": "2025-11-12T15:14:07.718344",
+    "outcome": null,
+    "actual_impact": null
   }
 ]
