@@ -315,12 +315,13 @@ class _ForceGraph extends StatelessWidget {
           LineChartBarData(
             spots: spots,
             isCurved: true,
-            color: colorScheme.primary,
+            curveSmoothness: 0.4,
+            color: const Color(0xFF9333EA), // Purple per briefing spec
             barWidth: 2,
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
-              color: colorScheme.primary.withValues(alpha: 0.2),
+              color: const Color(0xFF9333EA).withValues(alpha: 0.2),
             ),
           ),
         ],
