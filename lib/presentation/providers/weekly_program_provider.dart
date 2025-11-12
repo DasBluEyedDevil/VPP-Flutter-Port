@@ -42,3 +42,9 @@ class WeeklyProgramActions {
     await _repo.activateProgram(programId);
   }
 }
+
+/// Provider for a specific program by ID
+final programProvider = StreamProvider.family<WeeklyProgramWithDays?, String>((ref, programId) {
+  final actions = ref.watch(weeklyProgramActionsProvider);
+  return actions.getProgramById(programId);
+});

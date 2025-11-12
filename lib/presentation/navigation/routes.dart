@@ -14,6 +14,7 @@ class Routes {
   static const String justLift = '/just-lift';
   static const String singleExercise = '/single-exercise';
   static const String dailyRoutines = '/daily-routines';
+  static const String dailyRoutinesWithId = '/daily-routines/:routineId';
   static const String activeWorkout = '/active-workout';
   static const String weeklyPrograms = '/weekly-programs';
   static const String programBuilder = '/program-builder';

@@ -36,8 +36,7 @@ class RoutinesTab extends ConsumerWidget {
             itemBuilder: (context, index) => _RoutineCard(
               routine: routines[index],
               onTap: () {
-                // TODO: Navigate to routine detail screen
-                context.go(Routes.dailyRoutines);
+                context.go('${Routes.dailyRoutines}/${routines[index].id}');
               },
               onEdit: () => _showRoutineBuilder(context, ref, routines[index]),
               onDelete: () => _confirmDeleteRoutine(context, ref, routines[index], routineActions),

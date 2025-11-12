@@ -202,17 +202,38 @@ class WorkoutRepository {
   /// Save a new weekly program or update existing one
   Future<Either<Exception, void>> saveProgram(WeeklyProgramWithDays programWithDays) async {
     try {
-      // Insert program
-      await _workoutDao.insertWeeklyProgram(
-        WeeklyProgramsCompanion.insert(
-          id: programWithDays.program.id,
-          name: programWithDays.program.name,
-          createdAt: programWithDays.program.createdAt,
-          lastUsed: programWithDays.program.lastUsed,
-        ),
-      );
+      // Check if program exists
+      final existing = await _workoutDao.getWeeklyProgramById(programWithDays.program.id);
+      
+      if (existing != null) {
+        // Update existing program
+        await _workoutDao.updateWeeklyProgram(
+          WeeklyProgramsCompanion(
+            id: Value(programWithDays.program.id),
+            name: Value(programWithDays.program.name),
+            createdAt: Value(programWithDays.program.createdAt),
+            lastUsed: Value(programWithDays.program.lastUsed),
+          ),
+        );
+        
+        // Delete old days
+        final oldDays = await _workoutDao.getProgramDaysForProgram(programWithDays.program.id);
+        for (final day in oldDays) {
+          await _workoutDao.deleteProgramDay(day.id);
+        }
+      } else {
+        // Insert new program
+        await _workoutDao.insertWeeklyProgram(
+          WeeklyProgramsCompanion.insert(
+            id: programWithDays.program.id,
+            name: programWithDays.program.name,
+            createdAt: programWithDays.program.createdAt,
+            lastUsed: programWithDays.program.lastUsed,
+          ),
+        );
+      }
 
-      // Insert days
+      // Insert/update days
       for (final day in programWithDays.days) {
         await _workoutDao.insertProgramDay(
           ProgramDaysCompanion.insert(

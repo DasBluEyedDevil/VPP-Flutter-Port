@@ -59,6 +59,13 @@ class AppRouter {
         builder: (context, state) => const SingleExerciseScreen(),
       ),
       GoRoute(
+        path: Routes.dailyRoutinesWithId,
+        builder: (context, state) {
+          final routineId = state.pathParameters['routineId'] ?? '';
+          return DailyRoutinesScreen(routineId: routineId);
+        },
+      ),
+      GoRoute(
         path: Routes.dailyRoutines,
         builder: (context, state) => const DailyRoutinesScreen(),
       ),

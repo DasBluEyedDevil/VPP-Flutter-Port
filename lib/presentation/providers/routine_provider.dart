@@ -44,3 +44,9 @@ class RoutineActions {
     await _repo.markRoutineUsed(routineId);
   }
 }
+
+/// Provider for a specific routine by ID
+final routineProvider = StreamProvider.family<Routine?, String>((ref, routineId) {
+  final actions = ref.watch(routineActionsProvider);
+  return actions.watchRoutineById(routineId);
+});
