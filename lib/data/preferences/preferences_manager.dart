@@ -14,6 +14,8 @@ class PreferencesManager {
   static const String _autoplayEnabledKey = 'autoplay_enabled';
   static const String _stopAtTopKey = 'stop_at_top';
   static const String _enableVideoPlaybackKey = 'enable_video_playback';
+  static const String _themeColorSchemeIndexKey = 'theme_color_scheme_index';
+  static const String _themeBrightnessKey = 'theme_brightness';
 
   final SharedPreferences _prefs;
   final _preferencesController = StreamController<UserPreferences>.broadcast();
@@ -83,6 +85,28 @@ class PreferencesManager {
     await _prefs.setBool(_enableVideoPlaybackKey, enabled);
     logger.d('Enable video playback preference set to: $enabled');
     _preferencesController.add(_loadPreferences());
+  }
+
+  /// Get the theme color scheme index (0-6)
+  int getThemeColorSchemeIndex() {
+    return _prefs.getInt(_themeColorSchemeIndexKey) ?? 0;
+  }
+
+  /// Set the theme color scheme index (0-6)
+  Future<void> setThemeColorSchemeIndex(int index) async {
+    await _prefs.setInt(_themeColorSchemeIndexKey, index);
+    logger.d('Theme color scheme index set to: $index');
+  }
+
+  /// Get the theme brightness (true = dark, false = light)
+  bool getThemeBrightness() {
+    return _prefs.getBool(_themeBrightnessKey) ?? true; // Default to dark
+  }
+
+  /// Set the theme brightness (true = dark, false = light)
+  Future<void> setThemeBrightness(bool isDark) async {
+    await _prefs.setBool(_themeBrightnessKey, isDark);
+    logger.d('Theme brightness set to: ${isDark ? "dark" : "light"}');
   }
 
   /// Dispose resources
