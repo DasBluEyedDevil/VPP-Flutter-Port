@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../domain/models/connection_state.dart';
+import '../../domain/models/connection_state.dart' as ble;
 import '../../domain/models/weight_unit.dart';
+import '../../domain/models/workout_state.dart';
 import '../providers/workout_session_provider.dart';
 import '../providers/workout_session_state.dart';
 import '../providers/ble_connection_provider.dart';
@@ -11,6 +12,12 @@ import '../widgets/workout/countdown_card.dart';
 import '../widgets/workout/rest_timer_card.dart';
 import '../widgets/workout/set_summary_card.dart';
 import '../widgets/workout/cable_position_indicator.dart';
+import '../widgets/workout/connection_card.dart';
+import '../widgets/workout/idle_state_card.dart';
+import '../widgets/workout/active_state_card.dart';
+import '../widgets/workout/rep_counter_card.dart';
+import '../widgets/workout/current_exercise_card.dart';
+import '../widgets/workout/live_metrics_card.dart';
 import '../widgets/dialogs/connection_lost_dialog.dart';
 import '../navigation/routes.dart';
 
@@ -21,27 +28,39 @@ class ActiveWorkoutScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final workoutState = ref.watch(workoutSessionProvider);
     final connectionStateAsync = ref.watch(connectionStateProvider);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     // Show connection lost dialog if disconnected during workout
     connectionStateAsync.whenData((connState) {
-      if (workoutState.connectionLostDuringWorkout && connState is! Connected) {
+      if (workoutState.connectionLostDuringWorkout && connState is! ble.Connected) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _showConnectionLostDialog(context, ref);
         });
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Active Workout'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.stop),
-            onPressed: () => _confirmEndWorkout(context, ref),
-          ),
-        ],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isDark
+              ? [
+                  const Color(0xFF0F172A), // Slate-950
+                  const Color(0xFF312E81), // Purple-950
+                  const Color(0xFF0F172A), // Slate-950
+                ]
+              : [
+                  const Color(0xFFF8FAFC), // Slate-50
+                  const Color(0xFFF5F3FF), // Purple-50
+                  const Color(0xFFEFF6FF), // Blue-50
+                ],
+        ),
       ),
-      body: _buildWorkoutBody(context, ref, workoutState),
+      child: SafeArea(
+        child: _buildWorkoutBody(context, ref, workoutState, connectionStateAsync),
+      ),
     );
   }
 
@@ -49,112 +68,301 @@ class ActiveWorkoutScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     WorkoutSessionState state,
+    AsyncValue<ble.ConnectionState> connectionStateAsync,
   ) {
     final workoutState = state.workoutState;
-    return workoutState.when(
-      idle: () => const Center(child: Text('Idle')),
-      initializing: () => const Center(child: CircularProgressIndicator()),
-      countdown: (secondsRemaining) => CountdownCard(
-        secondsRemaining: secondsRemaining,
-      ),
-      active: () => _buildActiveWorkoutView(context, ref, state),
-      paused: () => const Center(child: Text('Paused')),
-      resting: (restSecondsRemaining, nextExerciseName, isLastExercise, currentSet, totalSets) => RestTimerCard(
-        secondsRemaining: restSecondsRemaining,
-        totalSeconds: 90, // TODO: get from exercise settings
-        nextExerciseName: nextExerciseName,
-        isLastExercise: isLastExercise,
-        currentSet: currentSet,
-        totalSets: totalSets,
-        onSkip: () => ref.read(workoutSessionProvider.notifier).skipRest(),
-      ),
-      setSummary: (metrics, peakPower, averagePower, repCount) => _buildSummaryView(context, ref, state, metrics, peakPower, averagePower, repCount),
-      completed: () => _buildCompletedView(context, ref),
-      error: (message) => Center(child: Text('Error: $message')),
+    final connectionState = connectionStateAsync.valueOrNull;
+    final showPositionBars = connectionState is ble.Connected &&
+        workoutState is Active &&
+        state.currentMetric != null;
+
+    return Stack(
+      children: [
+        // Left position bar (edge)
+        if (showPositionBars)
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 40,
+            child: CablePositionIndicator(
+              label: 'L',
+              currentPosition: state.currentMetric!.positionA,
+              minPosition: state.repRanges?.minPosition.toInt(),
+              maxPosition: state.repRanges?.maxPosition.toInt(),
+              isActive: state.currentMetric!.positionA > 0,
+            ),
+          ),
+
+        // Center content (scrollable)
+        Positioned(
+          left: showPositionBars ? 56 : 0, // 40dp bar + 16dp gap
+          right: showPositionBars ? 56 : 0,
+          top: 0,
+          bottom: 0,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              children: [
+                // Connection Card (always visible if connection state available)
+                if (connectionState != null) ...[
+                  ConnectionCard(
+                    connectionState: connectionState,
+                    onScan: () {
+                      ref.read(bleConnectionActionsProvider).startScanning();
+                    },
+                    onDisconnect: () {
+                      ref.read(bleConnectionActionsProvider).disconnect();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // State-specific cards
+                ...workoutState.when(
+                  idle: () => [
+                    IdleStateCard(
+                      onShowSetup: () {
+                        // TODO: Phase 2 - Show workout setup dialog
+                        // For now, start workout directly
+                        ref.read(workoutSessionActionsProvider).startWorkout();
+                      },
+                    ),
+                  ],
+                  initializing: () => [
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                  ],
+                  countdown: (secondsRemaining) => [
+                    // Countdown is shown as overlay, not in scroll
+                    const SizedBox.shrink(),
+                  ],
+                  active: () => _buildActiveWorkoutCards(context, ref, state),
+                  paused: () => [
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.pause_circle, size: 64),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Workout Paused',
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  resting: (
+                    restSecondsRemaining,
+                    nextExerciseName,
+                    isLastExercise,
+                    currentSet,
+                    totalSets,
+                  ) =>
+                      [
+                    // Rest timer is shown as overlay, not in scroll
+                    const SizedBox.shrink(),
+                  ],
+                  setSummary: (metrics, peakPower, averagePower, repCount) => [
+                    // Set summary is shown as overlay, not in scroll
+                    const SizedBox.shrink(),
+                  ],
+                  completed: () => [
+                    _buildCompletedCard(context, ref),
+                  ],
+                  error: (message) => [
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                size: 64, color: Colors.red),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Error',
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              message,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Right position bar (edge)
+        if (showPositionBars)
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: 40,
+            child: CablePositionIndicator(
+              label: 'R',
+              currentPosition: state.currentMetric!.positionB,
+              minPosition: state.repRanges?.minPosition.toInt(),
+              maxPosition: state.repRanges?.maxPosition.toInt(),
+              isActive: state.currentMetric!.positionB > 0,
+            ),
+          ),
+
+        // Overlays (floating on top)
+        ...workoutState.when(
+          idle: () => [],
+          initializing: () => [],
+          countdown: (secondsRemaining) => [
+            _buildOverlay(
+              context,
+              CountdownCard(secondsRemaining: secondsRemaining),
+            ),
+          ],
+          active: () => [],
+          paused: () => [],
+          resting: (
+            restSecondsRemaining,
+            nextExerciseName,
+            isLastExercise,
+            currentSet,
+            totalSets,
+          ) =>
+              [
+            _buildOverlay(
+              context,
+              RestTimerCard(
+                secondsRemaining: restSecondsRemaining,
+                totalSeconds: 90, // TODO: get from exercise settings
+                nextExerciseName: nextExerciseName,
+                isLastExercise: isLastExercise,
+                currentSet: currentSet,
+                totalSets: totalSets,
+                onSkip: () => ref.read(workoutSessionActionsProvider).skipRest(),
+              ),
+            ),
+          ],
+          setSummary: (metrics, peakPower, averagePower, repCount) => [
+            _buildOverlay(
+              context,
+              _buildSetSummaryOverlay(context, ref, state, metrics,
+                  peakPower, averagePower, repCount),
+            ),
+          ],
+          completed: () => [],
+          error: (_) => [],
+        ),
+      ],
     );
   }
 
-  Widget _buildActiveWorkoutView(
+  List<Widget> _buildActiveWorkoutCards(
     BuildContext context,
     WidgetRef ref,
     WorkoutSessionState state,
   ) {
+    final prefsAsync = ref.watch(userPreferencesProvider);
+    final weightUnit = prefsAsync.valueOrNull?.weightUnit ?? WeightUnit.kg;
+
+    return [
+      ActiveStateCard(
+        onStop: () => _confirmEndWorkout(context, ref),
+        justLiftTimer: null, // TODO: Get from state if in Just Lift mode
+      ),
+      const SizedBox(height: 16),
+      RepCounterCard(
+        warmupReps: state.repCount.warmupReps,
+        workingReps: state.repCount.workingReps,
+        totalReps: state.repCount.totalReps,
+        isWarmup: !state.repCount.isWarmupComplete,
+      ),
+      const SizedBox(height: 16),
+      if (state.loadedRoutine != null &&
+          state.currentExerciseIndex < state.loadedRoutine!.exercises.length)
+        CurrentExerciseCard(
+          exerciseName: state.loadedRoutine!.exercises[state.currentExerciseIndex]
+              .exerciseId,
+          currentSet: state.currentSetIndex + 1,
+          totalSets: state.loadedRoutine!.exercises[state.currentExerciseIndex].sets,
+        ),
+      if (state.loadedRoutine != null &&
+          state.currentExerciseIndex < state.loadedRoutine!.exercises.length)
+        const SizedBox(height: 16),
+      if (state.repCount.isWarmupComplete)
+        LiveMetricsCard(
+          currentMetric: state.currentMetric,
+          weightUnit: weightUnit,
+          showDuringWarmup: false,
+        ),
+    ];
+  }
+
+  Widget _buildCompletedCard(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Cable position indicators
-          if (state.currentMetric != null)
-            SizedBox(
-              height: 200,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 80,
-                    height: 200,
-                    child: CablePositionIndicator(
-                      label: 'L',
-                      currentPosition: state.currentMetric!.positionA,
-                      isActive: true,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  SizedBox(
-                    width: 80,
-                    height: 200,
-                    child: CablePositionIndicator(
-                      label: 'R',
-                      currentPosition: state.currentMetric!.positionB,
-                      isActive: true,
-                    ),
-                  ),
-                ],
-              ),
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.check_circle,
+              size: 100,
+              color: theme.colorScheme.primary,
             ),
-          if (state.currentMetric != null) const SizedBox(height: 24),
-          // Current metrics display
-          Text('Current Set', style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 16),
-          _MetricsDisplay(metrics: state.currentMetric),
-
-          const SizedBox(height: 24),
-
-          // Rep counter
-          Center(
-            child: Text(
-              'Reps: ${state.repCount.totalReps}',
-              style: theme.textTheme.displayLarge?.copyWith(
+            const SizedBox(height: 16),
+            Text(
+              'Workout Complete!',
+              style: theme.textTheme.headlineLarge?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
               ),
             ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Current exercise info
-          if (state.loadedRoutine != null) ...[
-            Text('Current Exercise', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Text(
-              state.loadedRoutine!.exercises[state.currentExerciseIndex].exerciseId,
-              style: theme.textTheme.titleLarge,
-            ),
-            Text(
-              'Set ${state.currentSetIndex + 1} of ${state.loadedRoutine!.exercises[state.currentExerciseIndex].sets}',
-              style: theme.textTheme.bodyMedium,
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  ref.read(workoutSessionActionsProvider).resetForNewWorkout();
+                  context.go(Routes.home);
+                },
+                child: const Text('Done'),
+              ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildSummaryView(
+  Widget _buildOverlay(BuildContext context, Widget child) {
+    return Positioned(
+      top: MediaQuery.of(context).size.height * 0.3,
+      left: 0,
+      right: 0,
+      child: Center(child: child),
+    );
+  }
+
+  Widget _buildSetSummaryOverlay(
     BuildContext context,
     WidgetRef ref,
     WorkoutSessionState state,
@@ -172,50 +380,23 @@ class ActiveWorkoutScreen extends ConsumerWidget {
         averagePower: averagePower,
         repCount: repCount,
         weightUnit: prefs.weightUnit,
-        formatWeight: (weight, unit) => '${weight.toStringAsFixed(1)} ${unit == WeightUnit.kg ? 'kg' : 'lbs'}',
+        formatWeight: (weight, unit) =>
+            '${weight.toStringAsFixed(1)} ${unit == WeightUnit.kg ? 'kg' : 'lbs'}',
         onContinue: () {
-          ref.read(workoutSessionProvider.notifier).proceedFromSummary();
+          ref.read(workoutSessionActionsProvider).proceedFromSummary();
         },
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err')),
-    );
-  }
-
-  Widget _buildCompletedView(
-    BuildContext context,
-    WidgetRef ref,
-  ) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.check_circle,
-            size: 100,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Workout Complete!',
-            style: theme.textTheme.headlineLarge,
-          ),
-          const SizedBox(height: 32),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () {
-                context.go(Routes.home);
-              },
-              child: const Text('Done'),
-            ),
-          ),
-        ],
+      loading: () => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (err, stack) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text('Error: $err'),
+        ),
       ),
     );
   }
@@ -235,7 +416,7 @@ class ActiveWorkoutScreen extends ConsumerWidget {
         },
         onEndWorkout: () {
           Navigator.pop(context);
-          ref.read(workoutSessionProvider.notifier).stopWorkout();
+          ref.read(workoutSessionActionsProvider).stopWorkout();
           context.go(Routes.home);
         },
       ),
@@ -264,87 +445,8 @@ class ActiveWorkoutScreen extends ConsumerWidget {
     );
 
     if (confirmed == true && context.mounted) {
-      ref.read(workoutSessionProvider.notifier).stopWorkout();
+      ref.read(workoutSessionActionsProvider).stopWorkout();
       context.go(Routes.home);
     }
-  }
-}
-
-class _MetricsDisplay extends StatelessWidget {
-  final dynamic metrics; // WorkoutMetric from domain
-
-  const _MetricsDisplay({this.metrics});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    if (metrics == null) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Center(
-            child: Text(
-              'Waiting for data...',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _MetricRow(
-              'Concentric',
-              '${metrics.concentricLoad.toStringAsFixed(1)} kg',
-            ),
-            const Divider(height: 16),
-            _MetricRow(
-              'Eccentric',
-              '${metrics.eccentricLoad.toStringAsFixed(1)} kg',
-            ),
-            const Divider(height: 16),
-            _MetricRow(
-              'Power',
-              '${metrics.power.toStringAsFixed(0)} W',
-            ),
-            const Divider(height: 16),
-            _MetricRow(
-              'Velocity',
-              '${metrics.velocity.toStringAsFixed(2)} m/s',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _MetricRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 16),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../theme/spacing.dart';
 
 /// Vertical cable position indicator bar widget
 ///
@@ -8,6 +7,7 @@ import '../../theme/spacing.dart';
 /// visualize cable positions for both left (L) and right (R) cables.
 ///
 /// Ported from Kotlin WorkoutTab.kt VerticalCablePositionBar (lines 1687-1793)
+/// Updated for Phase 1: 40dp width, gradient fill, percentage display on indicator
 class CablePositionIndicator extends StatelessWidget {
   /// Label text ("L" or "R")
   final String label;
@@ -56,101 +56,128 @@ class CablePositionIndicator extends StatelessWidget {
         ? colorScheme.primary
         : colorScheme.outline.withValues(alpha: 0.5);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Label text
-        Text(
-          label,
-          style: theme.textTheme.labelSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: labelColor,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.extraSmall),
-        // Bar container with flexible height
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final barHeight = constraints.maxHeight;
-              final hasRange = minProgress != null &&
-                  maxProgress != null &&
-                  maxProgress > minProgress;
+    return Container(
+      width: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final height = constraints.maxHeight;
+          final hasRange = minProgress != null &&
+              maxProgress != null &&
+              maxProgress > minProgress;
+          final positionHeight = height * currentProgress;
+          final indicatorPosition = height - positionHeight - 12; // Center indicator on position
 
-              return Stack(
-                alignment: Alignment.bottomCenter,
-                children: [
-                  // Background bar
-                  Container(
-                    width: 40,
+          return Stack(
+            children: [
+              // Background container
+              Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              // Range zone (if min/max provided)
+              if (hasRange)
+                Positioned(
+                  bottom: height * minProgress,
+                  left: 0,
+                  right: 0,
+                  height: height * (maxProgress - minProgress),
+                  child: Container(
                     decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(20),
+                      color: colorScheme.primary.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  // Range zone (if min/max provided)
-                  if (hasRange)
-                    Positioned(
-                      bottom: barHeight * minProgress,
-                      child: Container(
-                        width: 40,
-                        height: barHeight * (maxProgress - minProgress),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary.withValues(alpha: 0.3),
-                          borderRadius: const BorderRadius.vertical(
-                            bottom: Radius.circular(20),
-                          ),
-                        ),
-                      ),
+                ),
+              // Gradient fill (from bottom to current position)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: positionHeight,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [
+                        colorScheme.primary.withValues(alpha: 0.5),
+                        colorScheme.primary.withValues(alpha: 0.1),
+                      ],
                     ),
-                  // Current position fill
-                  Container(
-                    width: 40,
-                    height: barHeight * currentProgress,
-                    decoration: BoxDecoration(
-                      color: fillColor,
-                      borderRadius: const BorderRadius.vertical(
-                        bottom: Radius.circular(20),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              // Position indicator (rounded rectangle with percentage)
+              Positioned(
+                bottom: indicatorPosition.clamp(0.0, height - 24),
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: fillColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${(currentPosition / 10).toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        color: isActive
+                            ? colorScheme.onPrimary
+                            : colorScheme.onSurface,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  // Range markers (if min/max provided)
-                  if (hasRange) ...[
-                    // Min marker
-                    Positioned(
-                      bottom: barHeight * minProgress,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        height: 2,
-                        color: colorScheme.primary.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    // Max marker
-                    Positioned(
-                      bottom: barHeight * maxProgress,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        height: 2,
-                        color: colorScheme.primary.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ],
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: AppSpacing.extraSmall),
-        // Position value text
-        Text(
-          '${(currentPosition / 10).toStringAsFixed(0)}%',
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: labelColor,
-          ),
-        ),
-      ],
+                ),
+              ),
+              // Range markers (if min/max provided)
+              if (hasRange) ...[
+                // Min marker
+                Positioned(
+                  bottom: height * minProgress,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: 2,
+                    color: colorScheme.primary.withValues(alpha: 0.6),
+                  ),
+                ),
+                // Max marker
+                Positioned(
+                  bottom: height * maxProgress,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: 2,
+                    color: colorScheme.primary.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+              // Label at top
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: labelColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
