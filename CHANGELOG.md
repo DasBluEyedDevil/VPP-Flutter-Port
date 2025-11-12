@@ -6,6 +6,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2025-11-12] - Code Quality Cleanup ✅
+
+### Session Summary
+- **Duration:** 20 minutes
+- **Phase:** Post-Phase 5 cleanup
+- **Status:** Code quality significantly improved
+- **Approach:** Manual refactoring and test fixes
+- **Commit:** 0f81c49
+
+### Fixed
+- **16 test errors in number_picker_test.dart**
+  - Updated all getAppTheme() calls from 2 parameters to 1
+  - Changed `getAppTheme(darkColorScheme, Brightness.dark)` to `getAppTheme(darkColorScheme)`
+  - All 43 tests now passing (100%)
+
+### Removed
+- **8 unused imports and variables**
+  1. Unused import: `connection_logs.dart` in connection_log_provider.dart
+  2. Unused import: `workout_state.dart` in active_workout_screen.dart
+  3. Unused import: `stats_card.dart` in active_workout_screen.dart
+  4. Unused import: `workout_state.dart` in just_lift_screen.dart
+  5. Unused field: `_ref` in BleConnectionNotifier
+  6. Unused field: `_connectionStartTime` in ConnectingOverlay
+  7. Unused variable: `isDark` in SetSummaryCard
+  8. Unused variable: `selectedValue` in number_picker_test.dart
+
+### Replaced
+- **5 deprecated API calls**
+  - `colorScheme.surfaceVariant` → `colorScheme.surfaceContainerHighest` (2 files)
+  - `colorScheme.background` → `colorScheme.surface` (2 files)
+  - `printTime: true` → `dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart` (Logger config)
+
+### Results
+- **flutter analyze:** 39 issues → 10 issues (74% reduction)
+- **flutter test:** 43/43 tests passing (100%)
+- **Remaining issues:** 10 cosmetic info messages (naming conventions, controlled form deprecations)
+- **Test suite:** All tests passing, ready for hardware testing
+
+---
+
 ## [2025-11-12] - Phase 5: Widget Integration Complete ✅
 
 ### Session Summary
