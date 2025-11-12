@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
-import '../../../domain/models/routine.dart';
-import '../../../domain/models/routine_exercise.dart';
+import '../../../domain/models/routine.dart' as domain;
+import '../../../domain/models/routine_exercise.dart' as domain;
 import '../../../domain/models/program_mode.dart';
-import '../../../data/database/app_database.dart';
+import '../../../data/database/app_database.dart' as db;
 import 'exercise_picker_dialog.dart';
 import 'exercise_edit_dialog.dart';
 
 /// Dialog for creating or editing a workout routine
-/// 
+///
 /// Allows setting routine name and managing exercises with sets/reps.
 /// Returns the updated Routine when saved.
 class RoutineBuilderDialog extends StatefulWidget {
   /// Routine to edit (null for new routine)
-  final Routine? routine;
-  
+  final domain.Routine? routine;
+
   /// List of all available exercises
-  final List<Exercise> exercises;
+  final List<db.Exercise> exercises;
   
   /// Callback when user saves changes
-  final ValueChanged<Routine> onSave;
+  final ValueChanged<domain.Routine> onSave;
 
   const RoutineBuilderDialog({
     super.key,
@@ -28,15 +28,15 @@ class RoutineBuilderDialog extends StatefulWidget {
   });
 
   /// Show the dialog and return the updated routine
-  /// 
+  ///
   /// Returns the updated Routine if saved, null if cancelled.
-  static Future<Routine?> show(
+  static Future<domain.Routine?> show(
     BuildContext context, {
-    Routine? routine,
-    required List<Exercise> exercises,
-    required ValueChanged<Routine> onSave,
+    domain.Routine? routine,
+    required List<db.Exercise> exercises,
+    required ValueChanged<domain.Routine> onSave,
   }) {
-    return showDialog<Routine>(
+    return showDialog<domain.Routine>(
       context: context,
       builder: (context) => RoutineBuilderDialog(
         routine: routine,
@@ -52,7 +52,7 @@ class RoutineBuilderDialog extends StatefulWidget {
 
 class _RoutineBuilderDialogState extends State<RoutineBuilderDialog> {
   late TextEditingController _nameController;
-  late List<RoutineExercise> _exercises;
+  late List<domain.RoutineExercise> _exercises;
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -74,7 +74,7 @@ class _RoutineBuilderDialogState extends State<RoutineBuilderDialog> {
     final selectedIds = await ExercisePickerDialog.show(
       context,
       exercises: widget.exercises,
-      selectedIds: _exercises.map((e) => e.exerciseId).toSet(),
+      selectedIds: _exercises.map((e) => e.exerciseId).toSet().cast<String>(),
       onConfirm: (ids) {},
     );
 
@@ -83,26 +83,26 @@ class _RoutineBuilderDialogState extends State<RoutineBuilderDialog> {
         // Add new exercises that aren't already in the routine
         final existingIds = _exercises.map((e) => e.exerciseId).toSet();
         int nextOrder = _exercises.length;
-        
+
         for (final exerciseId in selectedIds) {
           if (!existingIds.contains(exerciseId)) {
-            // Find exercise details
-            final exercise = widget.exercises.firstWhere(
-              (e) => e.id == exerciseId,
-            );
-            
-            // Create default RoutineExercise
-            _exercises.add(
-              RoutineExercise(
-                exerciseId: exerciseId,
-                order: nextOrder++,
-                sets: 3,
-                reps: 10,
-                weightPerCableKg: 5.0,
-                mode: const ProgramMode.oldSchool(),
-                restSeconds: 90,
-              ),
-            );
+            // Find exercise details (not strictly needed, just for validation)
+            final exerciseExists = widget.exercises.any((e) => e.id == exerciseId);
+
+            if (exerciseExists) {
+              // Create default RoutineExercise
+              _exercises.add(
+                domain.RoutineExercise(
+                  exerciseId: exerciseId,
+                  order: nextOrder++,
+                  sets: 3,
+                  reps: 10,
+                  weightPerCableKg: 5.0,
+                  mode: const ProgramMode.oldSchool(),
+                  restSeconds: 90,
+                ),
+              );
+            }
           }
         }
       });
@@ -164,7 +164,7 @@ class _RoutineBuilderDialogState extends State<RoutineBuilderDialog> {
       }
 
       final now = DateTime.now().millisecondsSinceEpoch;
-      final routine = Routine(
+      final routine = domain.Routine(
         id: widget.routine?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
         createdAt: widget.routine?.createdAt ?? now,
@@ -242,11 +242,11 @@ class _RoutineBuilderDialogState extends State<RoutineBuilderDialog> {
                     final routineExercise = _exercises[index];
                     final exercise = widget.exercises.firstWhere(
                       (e) => e.id == routineExercise.exerciseId,
-                      orElse: () => Exercise(
+                      orElse: () => db.Exercise(
                         id: routineExercise.exerciseId,
                         name: 'Unknown Exercise',
-                        createdAt: 0,
-                        lastUsed: 0,
+                        createdAt: BigInt.zero,
+                        lastUsed: BigInt.zero,
                       ),
                     );
                     

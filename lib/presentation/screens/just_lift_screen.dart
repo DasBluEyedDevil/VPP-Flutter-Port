@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/workout_state.dart';
+import '../../domain/models/connection_state.dart' as domain;
 import '../providers/workout_session_provider.dart';
+import '../providers/workout_session_state.dart';
 import '../providers/ble_connection_provider.dart';
 
 class JustLiftScreen extends ConsumerWidget {
@@ -10,14 +12,17 @@ class JustLiftScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final workoutState = ref.watch(workoutSessionProvider);
-    final bleState = ref.watch(bleConnectionProvider);
+    final connectionStateAsync = ref.watch(connectionStateProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Just Lift'),
-        subtitle: const Text('Auto-start when you grab the handles'),
       ),
-      body: _buildBody(context, ref, workoutState, bleState),
+      body: connectionStateAsync.when(
+        data: (connState) => _buildBody(context, ref, workoutState, connState),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
+      ),
     );
   }
 
@@ -25,7 +30,7 @@ class JustLiftScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     WorkoutSessionState workoutState,
-    BleConnectionState bleState,
+    domain.ConnectionState connectionState,
   ) {
     // Just Lift logic:
     // - Shows "Grab handles to start" when idle
@@ -34,7 +39,7 @@ class JustLiftScreen extends ConsumerWidget {
     // - Auto-stops after 3s of no movement (auto-stop timer)
     // - Returns to idle instead of summary (Just Lift special behavior)
 
-    if (bleState is! BleConnected) {
+    if (connectionState is! domain.Connected) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -44,7 +49,13 @@ class JustLiftScreen extends ConsumerWidget {
             const Text('Not connected to Vitruvian device'),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => ref.read(bleConnectionProvider.notifier).connect(),
+              onPressed: () {
+                final actions = ref.read(bleConnectionActionsProvider);
+                actions.ensureConnection(
+                  onConnected: () {},
+                  onFailed: () {},
+                );
+              },
               child: const Text('Connect'),
             ),
           ],
@@ -52,14 +63,18 @@ class JustLiftScreen extends ConsumerWidget {
       );
     }
 
-    return switch (workoutState.state) {
-      WorkoutState.idle => _buildIdleView(context),
-      WorkoutState.countdownToStart => _buildCountdownView(context, workoutState),
-      WorkoutState.active => _buildActiveView(context, workoutState),
-      WorkoutState.autoStop => _buildAutoStopView(context, workoutState),
-      WorkoutState.justLiftSummary => _buildJustLiftSummary(context, ref, workoutState),
-      _ => const Center(child: Text('Unexpected state')),
-    };
+    final state = workoutState.workoutState;
+    return state.when(
+      idle: () => _buildIdleView(context),
+      initializing: () => const Center(child: CircularProgressIndicator()),
+      countdown: (secondsRemaining) => _buildCountdownView(context, workoutState),
+      active: () => _buildActiveView(context, workoutState),
+      paused: () => const Center(child: Text('Paused')),
+      resting: (_, __, ___, ____, _____) => const Center(child: Text('Unexpected state')),
+      setSummary: (_, __, ___, ____) => _buildJustLiftSummary(context, ref, workoutState),
+      completed: () => const Center(child: Text('Completed')),
+      error: (message) => Center(child: Text('Error: $message')),
+    );
   }
 
   Widget _buildIdleView(BuildContext context) {
@@ -93,6 +108,7 @@ class JustLiftScreen extends ConsumerWidget {
   }
 
   Widget _buildCountdownView(BuildContext context, WorkoutSessionState state) {
+    final countdown = state.autoStartCountdown ?? 3;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -103,7 +119,7 @@ class JustLiftScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            '${state.autoStartSecondsRemaining ?? 5}',
+            '$countdown',
             style: TextStyle(
               fontSize: 120,
               fontWeight: FontWeight.bold,
@@ -124,7 +140,7 @@ class JustLiftScreen extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Current metrics
-          if (state.currentMetrics != null) ...[
+          if (state.currentMetric != null) ...[
             Card(
               elevation: 2,
               child: Padding(
@@ -132,18 +148,23 @@ class JustLiftScreen extends ConsumerWidget {
                 child: Column(
                   children: [
                     _MetricRow(
-                      'Concentric',
-                      '${state.currentMetrics!.concentricLoad.toStringAsFixed(1)} kg',
+                      'Load A',
+                      '${state.currentMetric!.loadA.toStringAsFixed(1)} N',
                     ),
                     const Divider(height: 16),
                     _MetricRow(
-                      'Eccentric',
-                      '${state.currentMetrics!.eccentricLoad.toStringAsFixed(1)} kg',
+                      'Load B',
+                      '${state.currentMetric!.loadB.toStringAsFixed(1)} N',
+                    ),
+                    const Divider(height: 16),
+                    _MetricRow(
+                      'Total Load',
+                      '${state.currentMetric!.totalLoad.toStringAsFixed(1)} N',
                     ),
                     const Divider(height: 16),
                     _MetricRow(
                       'Power',
-                      '${state.currentMetrics!.power.toStringAsFixed(0)} W',
+                      '${state.currentMetric!.power.toStringAsFixed(0)} W',
                     ),
                   ],
                 ),
@@ -159,7 +180,7 @@ class JustLiftScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${state.repCount ?? 0}',
+            '${state.repCount.totalReps}',
             style: TextStyle(
               fontSize: 96,
               fontWeight: FontWeight.bold,
@@ -168,35 +189,33 @@ class JustLiftScreen extends ConsumerWidget {
           ),
 
           const SizedBox(height: 32),
+
+          // Auto-stop indicator
+          if (state.autoStopState.isActive) ...[
+            CircularProgressIndicator(
+              value: state.autoStopState.progress,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Auto-stopping in ${state.autoStopState.secondsRemaining}s',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Continue moving to cancel',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+
           Text(
             'Set will auto-complete when you stop moving',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAutoStopView(BuildContext context, WorkoutSessionState state) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 24),
-          Text(
-            'Auto-stopping in ${state.autoStopSecondsRemaining ?? 3}s',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Continue moving to cancel',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-            ),
           ),
         ],
       ),
@@ -208,7 +227,8 @@ class JustLiftScreen extends ConsumerWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(seconds: 3), () {
         if (context.mounted) {
-          ref.read(workoutSessionProvider.notifier).resetToIdle(); // Just Lift special: reset to idle
+          // Just Lift special: reset to idle (proceedFromSummary does this for Just Lift)
+          ref.read(workoutSessionProvider.notifier).proceedFromSummary();
         }
       });
     });
@@ -236,19 +256,12 @@ class JustLiftScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _SummaryRow('Reps', '${state.repCount ?? 0}'),
-                  if (state.completedSets.isNotEmpty) ...[
-                    const Divider(height: 16),
-                    _SummaryRow(
-                      'Avg Concentric',
-                      '${state.completedSets.last.concentricAvg.toStringAsFixed(1)} kg',
-                    ),
-                    const Divider(height: 16),
-                    _SummaryRow(
-                      'Peak Power',
-                      '${state.completedSets.last.powerPeak.toStringAsFixed(0)} W',
-                    ),
-                  ],
+                  _SummaryRow('Reps', '${state.repCount.totalReps}'),
+                  const Divider(height: 16),
+                  _SummaryRow(
+                    'Total Metrics',
+                    '${state.collectedMetrics.length} samples',
+                  ),
                 ],
               ),
             ),
@@ -257,7 +270,7 @@ class JustLiftScreen extends ConsumerWidget {
           Text(
             'Returning to idle...',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ],

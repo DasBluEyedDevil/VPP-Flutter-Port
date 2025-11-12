@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/models/workout_state.dart';
+import '../../domain/models/connection_state.dart';
+import '../../domain/models/weight_unit.dart';
 import '../providers/workout_session_provider.dart';
+import '../providers/workout_session_state.dart';
 import '../providers/ble_connection_provider.dart';
+import '../providers/preferences_provider.dart';
 import '../widgets/workout/countdown_card.dart';
 import '../widgets/workout/rest_timer_card.dart';
 import '../widgets/workout/set_summary_card.dart';
@@ -17,25 +21,21 @@ class ActiveWorkoutScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final workoutState = ref.watch(workoutSessionProvider);
-    final bleState = ref.watch(bleConnectionProvider);
+    final connectionStateAsync = ref.watch(connectionStateProvider);
 
     // Show connection lost dialog if disconnected during workout
-    if (workoutState.connectionLost && bleState is! BleConnected) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showConnectionLostDialog(context, ref);
-      });
-    }
+    connectionStateAsync.whenData((connState) {
+      if (workoutState.connectionLostDuringWorkout && connState is! Connected) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showConnectionLostDialog(context, ref);
+        });
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Active Workout'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.pause),
-            onPressed: workoutState.state == WorkoutState.active
-                ? () => ref.read(workoutSessionProvider.notifier).pauseWorkout()
-                : null,
-          ),
           IconButton(
             icon: const Icon(Icons.stop),
             onPressed: () => _confirmEndWorkout(context, ref),
@@ -51,22 +51,28 @@ class ActiveWorkoutScreen extends ConsumerWidget {
     WidgetRef ref,
     WorkoutSessionState state,
   ) {
-    return switch (state.state) {
-      WorkoutState.countdownToStart => CountdownCard(
-          secondsRemaining: state.autoStartSecondsRemaining ?? 5,
-        ),
-      WorkoutState.active => _buildActiveWorkoutView(context, ref, state),
-      WorkoutState.paused => _buildPausedView(context, ref, state),
-      WorkoutState.rest => RestTimerCard(
-          secondsRemaining: state.restSecondsRemaining ?? 0,
-          totalSeconds: 60, // TODO: get from preferences
-          onSkip: () => ref.read(workoutSessionProvider.notifier).skipRest(),
-        ),
-      WorkoutState.completed ||
-      WorkoutState.summary =>
-        _buildSummaryView(context, ref, state),
-      _ => const Center(child: Text('Unknown state')),
-    };
+    final workoutState = state.workoutState;
+    return workoutState.when(
+      idle: () => const Center(child: Text('Idle')),
+      initializing: () => const Center(child: CircularProgressIndicator()),
+      countdown: (secondsRemaining) => CountdownCard(
+        secondsRemaining: secondsRemaining,
+      ),
+      active: () => _buildActiveWorkoutView(context, ref, state),
+      paused: () => const Center(child: Text('Paused')),
+      resting: (restSecondsRemaining, nextExerciseName, isLastExercise, currentSet, totalSets) => RestTimerCard(
+        secondsRemaining: restSecondsRemaining,
+        totalSeconds: 90, // TODO: get from exercise settings
+        nextExerciseName: nextExerciseName,
+        isLastExercise: isLastExercise,
+        currentSet: currentSet,
+        totalSets: totalSets,
+        onSkip: () => ref.read(workoutSessionProvider.notifier).skipRest(),
+      ),
+      setSummary: (metrics, peakPower, averagePower, repCount) => _buildSummaryView(context, ref, state, metrics, peakPower, averagePower, repCount),
+      completed: () => _buildCompletedView(context, ref),
+      error: (message) => Center(child: Text('Error: $message')),
+    );
   }
 
   Widget _buildActiveWorkoutView(
@@ -84,14 +90,14 @@ class ActiveWorkoutScreen extends ConsumerWidget {
           // Current metrics display
           Text('Current Set', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 16),
-          _MetricsDisplay(metrics: state.currentMetrics),
+          _MetricsDisplay(metrics: state.currentMetric),
 
           const SizedBox(height: 24),
 
           // Rep counter
           Center(
             child: Text(
-              'Reps: ${state.repCount ?? 0}',
+              'Reps: ${state.repCount.totalReps}',
               style: theme.textTheme.displayLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.primary,
@@ -101,65 +107,19 @@ class ActiveWorkoutScreen extends ConsumerWidget {
 
           const SizedBox(height: 24),
 
-          // Completed sets
-          Text('Completed Sets', style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          Expanded(
-            child: state.completedSets.isEmpty
-                ? Center(
-                    child: Text(
-                      'No sets completed yet',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: state.completedSets.length,
-                    itemBuilder: (context, i) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: SetSummaryCard(
-                        setNumber: i + 1,
-                        reps: state.completedSets[i].reps,
-                        concentric: state.completedSets[i].concentricAvg,
-                        eccentric: state.completedSets[i].eccentricAvg,
-                        power: state.completedSets[i].powerPeak,
-                        duration: state.completedSets[i].duration,
-                      ),
-                    ),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPausedView(
-    BuildContext context,
-    WidgetRef ref,
-    WorkoutSessionState state,
-  ) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.pause_circle_outline,
-            size: 120,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Workout Paused',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 48),
-          ElevatedButton.icon(
-            onPressed: () =>
-                ref.read(workoutSessionProvider.notifier).resumeWorkout(),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Resume'),
-          ),
+          // Current exercise info
+          if (state.loadedRoutine != null) ...[
+            Text('Current Exercise', style: theme.textTheme.headlineSmall),
+            const SizedBox(height: 8),
+            Text(
+              state.loadedRoutine!.exercises[state.currentExerciseIndex].exerciseId,
+              style: theme.textTheme.titleLarge,
+            ),
+            Text(
+              'Set ${state.currentSetIndex + 1} of ${state.loadedRoutine!.exercises[state.currentExerciseIndex].sets}',
+              style: theme.textTheme.bodyMedium,
+            ),
+          ],
         ],
       ),
     );
@@ -169,55 +129,58 @@ class ActiveWorkoutScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     WorkoutSessionState state,
+    List<dynamic> metrics,
+    double peakPower,
+    double averagePower,
+    int repCount,
+  ) {
+    final prefsAsync = ref.watch(userPreferencesProvider);
+
+    return prefsAsync.when(
+      data: (prefs) => SetSummaryCard(
+        metrics: state.collectedMetrics,
+        peakPower: peakPower,
+        averagePower: averagePower,
+        repCount: repCount,
+        weightUnit: prefs.weightUnit,
+        formatWeight: (weight, unit) => '${weight.toStringAsFixed(1)} ${unit == WeightUnit.kg ? 'kg' : 'lbs'}',
+        onContinue: () {
+          ref.read(workoutSessionProvider.notifier).proceedFromSummary();
+        },
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Error: $err')),
+    );
+  }
+
+  Widget _buildCompletedView(
+    BuildContext context,
+    WidgetRef ref,
   ) {
     final theme = Theme.of(context);
 
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Center(
-            child: Icon(
-              Icons.check_circle,
-              size: 100,
-              color: theme.colorScheme.primary,
-            ),
+          Icon(
+            Icons.check_circle,
+            size: 100,
+            color: theme.colorScheme.primary,
           ),
           const SizedBox(height: 16),
-          Center(
-            child: Text(
-              'Workout Complete!',
-              style: theme.textTheme.headlineLarge,
-            ),
+          Text(
+            'Workout Complete!',
+            style: theme.textTheme.headlineLarge,
           ),
           const SizedBox(height: 32),
-          StatsCard(
-            title: 'Total Sets',
-            value: '${state.completedSets.length}',
-          ),
-          const SizedBox(height: 12),
-          StatsCard(
-            title: 'Total Reps',
-            value: '${_totalReps(state.completedSets)}',
-          ),
-          const SizedBox(height: 12),
-          StatsCard(
-            title: 'Duration',
-            value: _formatDuration(state.workoutDuration ?? 0),
-          ),
-          const SizedBox(height: 12),
-          StatsCard(
-            title: 'Total Volume',
-            value:
-                '${_totalVolume(state.completedSets).toStringAsFixed(0)} kg',
-          ),
           const Spacer(),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
+            child: FilledButton(
               onPressed: () {
-                ref.read(workoutSessionProvider.notifier).completeWorkout();
                 context.go(Routes.home);
               },
               child: const Text('Done'),
@@ -235,11 +198,15 @@ class ActiveWorkoutScreen extends ConsumerWidget {
       builder: (_) => ConnectionLostDialog(
         onReconnect: () {
           Navigator.pop(context);
-          ref.read(bleConnectionProvider.notifier).connect();
+          final actions = ref.read(bleConnectionActionsProvider);
+          actions.ensureConnection(
+            onConnected: () {},
+            onFailed: () {},
+          );
         },
         onEndWorkout: () {
           Navigator.pop(context);
-          ref.read(workoutSessionProvider.notifier).endWorkout();
+          ref.read(workoutSessionProvider.notifier).stopWorkout();
           context.go(Routes.home);
         },
       ),
@@ -268,24 +235,9 @@ class ActiveWorkoutScreen extends ConsumerWidget {
     );
 
     if (confirmed == true && context.mounted) {
-      ref.read(workoutSessionProvider.notifier).endWorkout();
+      ref.read(workoutSessionProvider.notifier).stopWorkout();
       context.go(Routes.home);
     }
-  }
-
-  int _totalReps(List<dynamic> sets) =>
-      sets.fold(0, (sum, set) => sum + (set.reps as int));
-
-  double _totalVolume(List<dynamic> sets) => sets.fold(
-        0.0,
-        (sum, set) =>
-            sum + ((set.concentricAvg as double) * (set.reps as int)),
-      );
-
-  String _formatDuration(int seconds) {
-    final mins = seconds ~/ 60;
-    final secs = seconds % 60;
-    return '${mins}m ${secs}s';
   }
 }
 
