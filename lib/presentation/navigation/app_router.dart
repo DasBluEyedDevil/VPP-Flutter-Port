@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vpp_flutter_port/presentation/navigation/routes.dart';
 import 'package:vpp_flutter_port/presentation/screens/active_workout_screen.dart';
@@ -16,6 +17,43 @@ import 'package:vpp_flutter_port/presentation/screens/workout_tab.dart';
 import 'package:vpp_flutter_port/presentation/screens/history_tab.dart';
 import 'package:vpp_flutter_port/presentation/screens/routines_tab.dart';
 
+/// Wrapper widget that manages splash screen visibility and navigation
+/// Matches Kotlin MainActivity pattern: shows splash for 900ms then navigates
+class SplashScreenWrapper extends StatefulWidget {
+  const SplashScreenWrapper({super.key});
+
+  @override
+  State<SplashScreenWrapper> createState() => _SplashScreenWrapperState();
+}
+
+class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
+  bool _showSplash = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Hide splash after 900ms and navigate to home (matching Kotlin delay)
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (mounted) {
+        setState(() {
+          _showSplash = false;
+        });
+        // Navigate to home after fade out completes
+        Future.delayed(const Duration(milliseconds: 250), () {
+          if (mounted) {
+            context.go(Routes.home);
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SplashScreen(visible: _showSplash);
+  }
+}
+
 /// App router configuration using GoRouter
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -23,7 +61,7 @@ class AppRouter {
     routes: [
       GoRoute(
         path: Routes.splash,
-        builder: (context, state) => const SplashScreen(),
+        builder: (context, state) => const SplashScreenWrapper(),
       ),
       ShellRoute(
         builder: (context, state, child) => MainScreen(child: child),

@@ -80,10 +80,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # Assets (will add as needed)
-  # assets:
-  #   - assets/images/
-  #   - assets/icons/
+  # Assets
+  assets:
+    - assets/images/
 
   # Fonts (will add custom fonts if needed)
   # fonts:
