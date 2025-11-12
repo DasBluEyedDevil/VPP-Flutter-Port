@@ -44,7 +44,7 @@ class BleRepositoryImpl implements BleRepository {
   final ConnectionLogger _connectionLogger;
   VitruvianBleManager? _bleManager;
   bool _isScanning = false;
-  StreamSubscription<BluetoothConnectionState>? _connectionStateSubscription;
+  StreamSubscription<ConnectionState>? _connectionStateSubscription;
   StreamSubscription<List<ScanResult>>? _scanResultsSubscription;
 
   // StateFlow equivalents using BehaviorSubject
@@ -204,7 +204,7 @@ class BleRepositoryImpl implements BleRepository {
       logger.d("Connection state set to Connecting");
 
       // Create BLE manager
-      _bleManager = VitruvianBleManager(_connectionLogger);
+      _bleManager = VitruvianBleManager();
       logger.d("Created VitruvianBleManager");
 
       // Set up connection observer
@@ -396,7 +396,7 @@ class BleRepositoryImpl implements BleRepository {
               "Reps=${params.reps}, "
               "JustLift=${params.isJustLift}, "
               "Progression=${params.progressionRegressionKg}kg"
-              "${hardwareModel != null ? ", Hardware=${hardwareModel.displayName}" : ""}";
+              "${hardwareModel != null ? ", Hardware=${hardwareModel?.displayName}" : ""}";
 
           _connectionLogger.logCommandSent(
             "START_WORKOUT_PROGRAM",
