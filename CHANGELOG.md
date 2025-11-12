@@ -6,6 +6,66 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2025-11-12] - Phase 5 Task 2: Theme Provider Complete
+
+### Session Summary
+- **Duration:** 45 minutes
+- **Phase:** Phase 5.1 - UI Layer Foundation (Theme Provider)
+- **Status:** Task 2 complete - Theme composition and state management
+- **Files:** 4 files created/modified (606 lines total)
+- **Approach:** TDD - Write failing test first, implement, verify
+
+### Added
+- **lib/presentation/theme/theme.dart** (241 lines)
+  - getAppTheme() function returning Material 3 ThemeData
+  - getColorScheme() helper for color scheme selection by index
+  - All component themes configured (AppBar, Card, Buttons, Input, Navigation, Dialog, etc.)
+  - Uses colors.dart, typography.dart, and spacing.dart
+
+- **lib/presentation/providers/theme_provider.dart** (91 lines)
+  - ThemeState with freezed (colorSchemeIndex, brightness)
+  - ThemeNotifier extends StateNotifier for theme management
+  - setColorScheme(int) method to switch between 7 color schemes
+  - toggleBrightness() method for light/dark mode toggle
+  - Persistence via PreferencesManager
+  - Auto-load saved preferences on initialization
+
+- **test/presentation/providers/theme_provider_test.dart** (98 lines)
+  - Tests for initial state (default to dark mode, scheme 0)
+  - Tests for setColorScheme (updates state + persists)
+  - Tests for toggleBrightness (light ↔ dark)
+  - Uses SharedPreferences.setMockInitialValues for testing
+
+- **lib/presentation/providers/theme_provider.freezed.dart** (176 lines)
+  - Generated freezed code for ThemeState
+
+### Modified
+- **lib/data/preferences/preferences_manager.dart**
+  - Added getThemeColorSchemeIndex() / setThemeColorSchemeIndex(int)
+  - Added getThemeBrightness() / setThemeBrightness(bool)
+  - Theme preferences persist to SharedPreferences
+
+### Fixed
+- CardTheme → CardThemeData (type error)
+- DialogTheme → DialogThemeData (type error)
+- MaterialStateProperty → WidgetStateProperty (deprecated API)
+- MaterialState → WidgetState (deprecated API)
+
+### Technical Details
+- **TDD Approach:** Write failing test → Run test → Implement → Verify tests pass
+- **Delegation:** Cursor CLI created initial implementation in ~60 seconds
+- **Test Results:** All 3 tests pass (initial state, setColorScheme, toggleBrightness)
+- **flutter analyze:** 0 errors, 0 warnings
+- **flutter test:** 3/3 tests passing
+- **Commit SHA:** df5e4bc
+
+### Next Steps
+- Task 3: Navigation Setup (routes.dart + app_router.dart + GoRouter)
+- Task 4: Update Main App Entry Point (app.dart + main.dart)
+- Continue Sub-Phase 5.1 (Foundation)
+
+---
+
 ## [2025-11-12] - Phase 5 Task 1: Theme Foundation Complete
 
 ### Session Summary
