@@ -113,3 +113,17 @@ const ColorScheme lightColorScheme = ColorScheme(
   inversePrimary: AppColors.primaryPurple,
   surfaceTint: AppColors.primaryPurple,
 );
+
+/// List of available color schemes (7 options).
+///
+/// For now, we use the same purple scheme. In the future, we can add
+/// Blue, Green, Orange, Red, Teal, and Pink variants.
+const List<ColorScheme> colorSchemes = [
+  darkColorScheme,  // 0: Purple (default)
+  darkColorScheme,  // 1: Blue (TODO)
+  darkColorScheme,  // 2: Green (TODO)
+  darkColorScheme,  // 3: Orange (TODO)
+  darkColorScheme,  // 4: Red (TODO)
+  darkColorScheme,  // 5: Teal (TODO)
+  darkColorScheme,  // 6: Pink (TODO)
+];
