@@ -42,6 +42,9 @@ dependencies:
   # Charts & Analytics (replaces MPAndroidChart)
   fl_chart: ^0.69.2
 
+  # Animations & Effects
+  confetti: ^0.7.0
+
   # Permissions
   permission_handler: ^11.3.1
 
