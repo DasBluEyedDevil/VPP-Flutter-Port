@@ -89,7 +89,7 @@ class _ConnectingOverlayState extends State<ConnectingOverlay> {
         // Semi-transparent black background
         Positioned.fill(
           child: Container(
-            color: Colors.black.withOpacity(0.6),
+            color: Colors.black.withValues(alpha: 0.6),
           ),
         ),
         

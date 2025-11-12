@@ -28,14 +28,13 @@ ColorScheme getColorScheme(int index, Brightness brightness) {
 /// All component themes are configured to match Material 3 design guidelines.
 ///
 /// [colorScheme] - The ColorScheme to use (light or dark)
-/// [brightness] - The brightness mode (light or dark)
 ///
 /// Returns a fully configured ThemeData with Material 3 enabled.
-ThemeData getAppTheme(ColorScheme colorScheme, Brightness brightness) {
+ThemeData getAppTheme(ColorScheme colorScheme) {
   return ThemeData(
     useMaterial3: true,
     colorScheme: colorScheme,
-    brightness: brightness,
+    brightness: colorScheme.brightness,
     textTheme: appTextTheme,
     
     // AppBar Theme

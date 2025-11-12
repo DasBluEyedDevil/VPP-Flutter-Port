@@ -110,7 +110,7 @@ class AnalyticsCharts extends StatelessWidget {
                     horizontalInterval: _calculateInterval(spots.map((s) => s.y).toList()),
                     getDrawingHorizontalLine: (value) {
                       return FlLine(
-                        color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                         strokeWidth: 1,
                       );
                     },
@@ -179,7 +179,7 @@ class AnalyticsCharts extends StatelessWidget {
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: theme.colorScheme.primary.withOpacity(0.2),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.2),
                       ),
                       preventCurveOverShooting: true,
                     ),
@@ -281,7 +281,7 @@ class AnalyticsCharts extends StatelessWidget {
                     drawVerticalLine: false,
                     getDrawingHorizontalLine: (value) {
                       return FlLine(
-                        color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                         strokeWidth: 1,
                       );
                     },

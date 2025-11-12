@@ -61,7 +61,7 @@ class _CountdownCardState extends State<CountdownCard>
           colors: [
             colorScheme.background,
             colorScheme.surface,
-            colorScheme.surfaceVariant,
+            colorScheme.surfaceContainerHighest,
           ],
         ),
       ),

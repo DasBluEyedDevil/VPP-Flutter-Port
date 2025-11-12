@@ -19,9 +19,9 @@ ui.Shader shimmerGradient({
   }
 
   final shimmerColors = [
-    Colors.grey.withOpacity(0.6),
-    Colors.grey.withOpacity(0.2),
-    Colors.grey.withOpacity(0.6),
+    Colors.grey.withValues(alpha: 0.6),
+    Colors.grey.withValues(alpha: 0.2),
+    Colors.grey.withValues(alpha: 0.6),
   ];
 
   // Calculate gradient offset based on animation
@@ -104,7 +104,7 @@ class _ShimmerBoxState extends State<ShimmerBox>
             height: widget.height,
             decoration: BoxDecoration(
               borderRadius: widget.borderRadius ?? BorderRadius.circular(8),
-              color: Colors.grey.withOpacity(0.3),
+              color: Colors.grey.withValues(alpha: 0.3),
             ),
             child: widget.child,
           ),
@@ -128,9 +128,9 @@ class _ShimmerPainter extends CustomPainter {
     if (!enabled) return;
 
     final shimmerColors = [
-      Colors.grey.withOpacity(0.6),
-      Colors.grey.withOpacity(0.2),
-      Colors.grey.withOpacity(0.6),
+      Colors.grey.withValues(alpha: 0.6),
+      Colors.grey.withValues(alpha: 0.2),
+      Colors.grey.withValues(alpha: 0.6),
     ];
 
     final offset = animationValue % 2000 - 1000;

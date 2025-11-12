@@ -15,8 +15,8 @@ class VPPApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'Vitruvian Project Phoenix',
-      theme: getAppTheme(colorScheme, Brightness.light),
-      darkTheme: getAppTheme(colorScheme, Brightness.dark),
+      theme: getAppTheme(lightColorScheme),
+      darkTheme: getAppTheme(colorScheme),
       themeMode: themeState.brightness == Brightness.dark
           ? ThemeMode.dark
           : ThemeMode.light,

@@ -266,7 +266,7 @@ class _PRCelebrationContent extends StatelessWidget {
             Text(
               'Tap to dismiss',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               ),
             ),
           ],

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:logger/logger.dart';
 import 'constants.dart';
 import '../../domain/models/workout_metric.dart';
 import '../../domain/models/connection_state.dart';
@@ -17,6 +18,18 @@ import '../../domain/models/rep_notification.dart';
 /// 
 /// Ported from VitruvianBleManager.kt (745 lines)
 class VitruvianBleManager {
+  // Logger for debugging and monitoring
+  final Logger _logger = Logger(
+    printer: PrettyPrinter(
+      methodCount: 0,
+      errorMethodCount: 5,
+      lineLength: 80,
+      colors: true,
+      printEmojis: false,
+      printTime: true,
+    ),
+  );
+
   // Handle state detection thresholds (from Kotlin source)
   static const double handleGrabbedThreshold = 8.0;
   static const double handleRestThreshold = 2.5;
@@ -90,7 +103,7 @@ class VitruvianBleManager {
   /// Returns the first device found with name prefix matching BleConstants.deviceNamePrefix
   Future<BluetoothDevice?> scanForDevice({Duration timeout = const Duration(seconds: 30)}) async {
     try {
-      print('[VitruvianBleManager] Starting scan for devices...');
+      _logger.d('Starting scan for devices...');
       _updateConnectionStatus(const ConnectionState.scanning());
       
       // Start scanning
@@ -105,10 +118,10 @@ class VitruvianBleManager {
           final device = scanResult.device;
           final name = scanResult.advertisementData.advName;
 
-          print('[VitruvianBleManager] Found device: $name (${device.remoteId})');
+          _logger.d('Found device: $name (${device.remoteId})');
           
           if (name.startsWith(BleConstants.deviceNamePrefix)) {
-            print('[VitruvianBleManager] Found Vitruvian device: $name');
+            _logger.i('Found Vitruvian device: $name');
             await FlutterBluePlus.stopScan();
             return device;
           }
@@ -118,7 +131,7 @@ class VitruvianBleManager {
       await FlutterBluePlus.stopScan();
       return null;
     } catch (e) {
-      print('[VitruvianBleManager] Scan error: $e');
+      _logger.e('Scan error: $e');
       await FlutterBluePlus.stopScan();
       return null;
     }
@@ -129,7 +142,7 @@ class VitruvianBleManager {
   /// Establishes connection, negotiates MTU, discovers services, and initializes characteristics.
   Future<bool> connect(BluetoothDevice device) async {
     if (_device != null && _device!.remoteId == device.remoteId && _isInitialized) {
-      print('[VitruvianBleManager] Already connected to ${device.remoteId}');
+      _logger.i('Already connected to ${device.remoteId}');
       return true;
     }
     
@@ -137,7 +150,7 @@ class VitruvianBleManager {
       _updateConnectionStatus(const ConnectionState.connecting());
       _device = device;
       
-      print('[VitruvianBleManager] Connecting to ${device.remoteId}...');
+      _logger.i('Connecting to ${device.remoteId}...');
       
       // Connect with timeout
       await device.connect(
@@ -145,11 +158,11 @@ class VitruvianBleManager {
         autoConnect: false,
       );
       
-      print('[VitruvianBleManager] Connected, discovering services...');
+      _logger.d('Connected, discovering services...');
       
       // Discover services
       final services = await device.discoverServices();
-      print('[VitruvianBleManager] Discovered ${services.length} services');
+      _logger.d('Discovered ${services.length} services');
       
       // Find NUS service
       BluetoothService? nusService;
@@ -164,7 +177,7 @@ class VitruvianBleManager {
         throw Exception('NUS service not found');
       }
       
-      print('[VitruvianBleManager] Found NUS service');
+      _logger.d('Found NUS service');
       
       // Find required characteristics
       _nusRxCharacteristic = _findCharacteristic(
@@ -198,23 +211,23 @@ class VitruvianBleManager {
         throw Exception('Required characteristics not found');
       }
       
-      print('[VitruvianBleManager] All required characteristics found');
+      _logger.d('All required characteristics found');
       
       // Request MTU (critical for 96-byte frames)
-      print('[VitruvianBleManager] Requesting MTU: $requiredMtu bytes');
+      _logger.d('Requesting MTU: $requiredMtu bytes');
       await device.requestMtu(requiredMtu);
-      print('[VitruvianBleManager] MTU negotiation complete');
+      _logger.d('MTU negotiation complete');
       
       // Enable notifications for rep notify characteristic
       await _repNotifyCharacteristic!.setNotifyValue(true);
-      print('[VitruvianBleManager] Rep notify notifications enabled');
+      _logger.d('Rep notify notifications enabled');
       
       // Subscribe to rep notify stream
       _repNotifySubscription?.cancel();
       _repNotifySubscription = _repNotifyCharacteristic!.lastValueStream.listen(
         _handleRepNotification,
         onError: (error) {
-          print('[VitruvianBleManager] Rep notify stream error: $error');
+          _logger.e('Rep notify stream error: $error');
         },
       );
       
@@ -222,7 +235,7 @@ class VitruvianBleManager {
       _connectionStateSubscription?.cancel();
       _connectionStateSubscription = device.connectionState.listen(
         (state) {
-          print('[VitruvianBleManager] Connection state changed: $state');
+          _logger.d('Connection state changed: $state');
           if (state == BluetoothConnectionState.disconnected) {
             _handleDisconnection();
           }
@@ -247,10 +260,10 @@ class VitruvianBleManager {
         hardwareModel: hardwareModel,
       ));
       
-      print('[VitruvianBleManager] Connection initialized successfully');
+      _logger.i('Connection initialized successfully');
       return true;
     } catch (e) {
-      print('[VitruvianBleManager] Connection error: $e');
+      _logger.e('Connection error: $e');
       _updateConnectionStatus(ConnectionState.error(message: e.toString()));
       await disconnect();
       return false;
@@ -268,10 +281,10 @@ class VitruvianBleManager {
         (c) => c.uuid == uuid,
         orElse: () => throw StateError('Characteristic not found'),
       );
-      print('[VitruvianBleManager] Found $name characteristic');
+      _logger.d('Found $name characteristic');
       return characteristic;
     } catch (e) {
-      print('[VitruvianBleManager] $name characteristic not found: $e');
+      _logger.w('$name characteristic not found: $e');
       return null;
     }
   }
@@ -284,7 +297,7 @@ class VitruvianBleManager {
       final services = await _device!.discoverServices();
       return services.any((service) => service.uuid == BleConstants.nusServiceUuid);
     } catch (e) {
-      print('[VitruvianBleManager] Error checking service support: $e');
+      _logger.e('Error checking service support: $e');
       return false;
     }
   }
@@ -294,21 +307,21 @@ class VitruvianBleManager {
   /// Enables notifications and starts polling.
   Future<bool> initialize() async {
     if (!_isInitialized) {
-      print('[VitruvianBleManager] Cannot initialize: not connected');
+      _logger.w('Cannot initialize: not connected');
       return false;
     }
     
     try {
-      print('[VitruvianBleManager] Initializing...');
+      _logger.i('Initializing...');
       
       // Start polling
       startMonitorPolling();
       startPropertyPolling();
       
-      print('[VitruvianBleManager] Initialization complete');
+      _logger.i('Initialization complete');
       return true;
     } catch (e) {
-      print('[VitruvianBleManager] Initialization error: $e');
+      _logger.e('Initialization error: $e');
       return false;
     }
   }
@@ -316,16 +329,16 @@ class VitruvianBleManager {
   /// Start monitor polling at 100Hz (every 100ms)
   void startMonitorPolling() {
     if (_monitorPollTimer != null && _monitorPollTimer!.isActive) {
-      print('[VitruvianBleManager] Monitor polling already active');
+      _logger.d('Monitor polling already active');
       return;
     }
     
     if (_monitorCharacteristic == null) {
-      print('[VitruvianBleManager] Cannot start monitor polling: characteristic not available');
+      _logger.w('Cannot start monitor polling: characteristic not available');
       return;
     }
     
-    print('[VitruvianBleManager] Starting monitor polling @ 100Hz');
+    _logger.i('Starting monitor polling @ 100Hz');
     
     _monitorPollTimer = Timer.periodic(monitorPollInterval, (timer) async {
       try {
@@ -341,7 +354,7 @@ class VitruvianBleManager {
           _handleMonitorData(data);
         }
       } catch (e) {
-        print('[VitruvianBleManager] Monitor poll error: $e');
+        _logger.w('Monitor poll error: $e');
         // Don't cancel timer on error, keep trying
       }
     });
@@ -350,16 +363,16 @@ class VitruvianBleManager {
   /// Start property polling at 2Hz (every 500ms)
   void startPropertyPolling() {
     if (_propertyPollTimer != null && _propertyPollTimer!.isActive) {
-      print('[VitruvianBleManager] Property polling already active');
+      _logger.d('Property polling already active');
       return;
     }
     
     if (_propertyCharacteristic == null) {
-      print('[VitruvianBleManager] Cannot start property polling: characteristic not available');
+      _logger.w('Cannot start property polling: characteristic not available');
       return;
     }
     
-    print('[VitruvianBleManager] Starting property polling @ 2Hz');
+    _logger.i('Starting property polling @ 2Hz');
     
     _propertyPollTimer = Timer.periodic(propertyPollInterval, (timer) async {
       try {
@@ -372,7 +385,7 @@ class VitruvianBleManager {
         await _propertyCharacteristic!.read()
           .timeout(gattOperationTimeout);
       } catch (e) {
-        print('[VitruvianBleManager] Property poll error: $e');
+        _logger.w('Property poll error: $e');
         // Don't cancel timer on error, keep trying
       }
     });
@@ -380,7 +393,7 @@ class VitruvianBleManager {
   
   /// Stop all polling
   void stopPolling() {
-    print('[VitruvianBleManager] Stopping all polling');
+    _logger.i('Stopping all polling');
     
     _monitorPollTimer?.cancel();
     _monitorPollTimer = null;
@@ -394,7 +407,7 @@ class VitruvianBleManager {
   /// Parses ByteBuffer data into WorkoutMetric and emits to stream.
   void _handleMonitorData(List<int> data) {
     if (data.length < 96) {
-      print('[VitruvianBleManager] Monitor data too short: ${data.length} bytes');
+      _logger.w('Monitor data too short: ${data.length} bytes');
       return;
     }
     
@@ -419,14 +432,14 @@ class VitruvianBleManager {
       
       if (positionA.abs() > positionSpikeThreshold) {
         filteredPositionA = _lastGoodPositionA;
-        print('[VitruvianBleManager] Filtered positionA spike: $positionA -> $_lastGoodPositionA');
+        _logger.d('Filtered positionA spike: $positionA -> $_lastGoodPositionA');
       } else {
         _lastGoodPositionA = filteredPositionA;
       }
       
       if (positionB.abs() > positionSpikeThreshold) {
         filteredPositionB = _lastGoodPositionB;
-        print('[VitruvianBleManager] Filtered positionB spike: $positionB -> $_lastGoodPositionB');
+        _logger.d('Filtered positionB spike: $positionB -> $_lastGoodPositionB');
       } else {
         _lastGoodPositionB = filteredPositionB;
       }
@@ -451,7 +464,7 @@ class VitruvianBleManager {
       // Analyze handle state
       _analyzeHandleState(metric);
     } catch (e) {
-      print('[VitruvianBleManager] Error parsing monitor data: $e');
+      _logger.e('Error parsing monitor data: $e');
     }
   }
   
@@ -460,7 +473,7 @@ class VitruvianBleManager {
   /// Parses rep counter data from RepNotify characteristic.
   void _handleRepNotification(List<int> data) {
     if (data.length < 6) {
-      print('[VitruvianBleManager] Rep notification data too short: ${data.length} bytes');
+      _logger.w('Rep notification data too short: ${data.length} bytes');
       return;
     }
     
@@ -480,14 +493,14 @@ class VitruvianBleManager {
         timestamp: timestamp,
       );
       
-      print('[VitruvianBleManager] Rep notification: top=$topCounter, complete=$completeCounter');
+      _logger.d('Rep notification: top=$topCounter, complete=$completeCounter');
       
       // Emit notification
       if (!_repEventsController.isClosed) {
         _repEventsController.add(notification);
       }
     } catch (e) {
-      print('[VitruvianBleManager] Error parsing rep notification: $e');
+      _logger.e('Error parsing rep notification: $e');
     }
   }
   
@@ -533,7 +546,7 @@ class VitruvianBleManager {
     }
     
     if (newState != _currentHandleState) {
-      print('[VitruvianBleManager] Handle state changed: $_currentHandleState -> $newState '
+      _logger.i('Handle state changed: $_currentHandleState -> $newState '
           '(position=$avgPosition, velocity=$avgVelocity)');
       _currentHandleState = newState;
       
@@ -547,7 +560,7 @@ class VitruvianBleManager {
   /// 
   /// Resets handle state to released.
   void enableJustLiftWaitingMode() {
-    print('[VitruvianBleManager] Enabling Just Lift waiting mode');
+    _logger.i('Enabling Just Lift waiting mode');
     _currentHandleState = HandleState.released;
     if (!_handleStateController.isClosed) {
       _handleStateController.add(HandleState.released);
@@ -559,27 +572,27 @@ class VitruvianBleManager {
   /// Writes data to NUS RX characteristic.
   Future<bool> sendCommand(Uint8List data) async {
     if (_nusRxCharacteristic == null) {
-      print('[VitruvianBleManager] Cannot send command: NUS RX characteristic not available');
+      _logger.w('Cannot send command: NUS RX characteristic not available');
       return false;
     }
     
     if (!_isInitialized) {
-      print('[VitruvianBleManager] Cannot send command: not initialized');
+      _logger.w('Cannot send command: not initialized');
       return false;
     }
     
     try {
-      print('[VitruvianBleManager] Sending command: ${data.length} bytes');
+      _logger.d('Sending command: ${data.length} bytes');
       
       await _nusRxCharacteristic!.write(
         data,
         withoutResponse: false,
       ).timeout(gattOperationTimeout);
       
-      print('[VitruvianBleManager] Command sent successfully');
+      _logger.d('Command sent successfully');
       return true;
     } catch (e) {
-      print('[VitruvianBleManager] Error sending command: $e');
+      _logger.e('Error sending command: $e');
       return false;
     }
   }
@@ -597,7 +610,7 @@ class VitruvianBleManager {
   
   /// Handle disconnection
   void _handleDisconnection() {
-    print('[VitruvianBleManager] Device disconnected');
+    _logger.i('Device disconnected');
     
     stopPolling();
     _isInitialized = false;
@@ -609,7 +622,7 @@ class VitruvianBleManager {
   
   /// Disconnect from device
   Future<void> disconnect() async {
-    print('[VitruvianBleManager] Disconnecting...');
+    _logger.i('Disconnecting...');
     
     stopPolling();
     
@@ -623,7 +636,7 @@ class VitruvianBleManager {
       try {
         await _repNotifyCharacteristic!.setNotifyValue(false);
       } catch (e) {
-        print('[VitruvianBleManager] Error disabling notifications: $e');
+        _logger.w('Error disabling notifications: $e');
       }
     }
     
@@ -631,7 +644,7 @@ class VitruvianBleManager {
       try {
         await _device!.disconnect();
       } catch (e) {
-        print('[VitruvianBleManager] Error disconnecting: $e');
+        _logger.w('Error disconnecting: $e');
       }
     }
     
@@ -644,14 +657,14 @@ class VitruvianBleManager {
     
     _updateConnectionStatus(const ConnectionState.disconnected());
     
-    print('[VitruvianBleManager] Disconnected');
+    _logger.i('Disconnected');
   }
   
   /// Cleanup all resources
   /// 
   /// Cancels all timers and subscriptions, closes streams.
   Future<void> cleanup() async {
-    print('[VitruvianBleManager] Cleaning up...');
+    _logger.i('Cleaning up...');
     
     await disconnect();
     
@@ -660,6 +673,6 @@ class VitruvianBleManager {
     await _repEventsController.close();
     await _handleStateController.close();
     
-    print('[VitruvianBleManager] Cleanup complete');
+    _logger.i('Cleanup complete');
   }
 }

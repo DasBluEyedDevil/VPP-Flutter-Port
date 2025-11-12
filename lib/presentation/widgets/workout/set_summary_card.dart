@@ -54,7 +54,7 @@ class SetSummaryCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: colorScheme.primary.withOpacity(0.1),
+          color: colorScheme.primary.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -303,7 +303,7 @@ class _ForceGraph extends StatelessWidget {
         borderData: FlBorderData(
           show: true,
           border: Border.all(
-            color: colorScheme.outline.withOpacity(0.2),
+            color: colorScheme.outline.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -320,7 +320,7 @@ class _ForceGraph extends StatelessWidget {
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
-              color: colorScheme.primary.withOpacity(0.2),
+              color: colorScheme.primary.withValues(alpha: 0.2),
             ),
           ),
         ],

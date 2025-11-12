@@ -124,7 +124,7 @@ class _RestTimerCardState extends State<RestTimerCard>
           colors: [
             colorScheme.background,
             colorScheme.surface,
-            colorScheme.surfaceVariant,
+            colorScheme.surfaceContainerHighest,
           ],
         ),
       ),

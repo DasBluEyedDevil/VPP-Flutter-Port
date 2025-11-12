@@ -83,7 +83,7 @@ class ColorSchemePicker extends ConsumerWidget {
                   border: Border.all(
                     color: isSelected
                         ? colorScheme.primary
-                        : colorScheme.outline.withOpacity(0.3),
+                        : colorScheme.outline.withValues(alpha: 0.3),
                     width: isSelected ? 3.0 : 1.5,
                   ),
                 ),
