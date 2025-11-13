@@ -1,52 +1,72 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/repositories/workout_repository.dart';
-import '../../data/database/app_database.dart'; // Use database Routine type
-import 'workout_session_provider.dart'; // Import to reuse workoutRepositoryProvider
+import '../../data/repositories/routine_repository.dart';
+import '../../domain/models/routine.dart' as domain;
+import 'connection_log_provider.dart' show appDatabaseProvider;
+
+/// Repository provider for routine operations
+final routineRepositoryProvider = Provider<RoutineRepository>((ref) {
+  final database = ref.watch(appDatabaseProvider);
+  return RoutineRepository(database.workoutDao, database.exerciseDao);
+});
 
 /// Stream provider for routines
 ///
 /// Ported from MainViewModel.kt routines (lines 127-135)
-final routinesProvider = StreamProvider<List<Routine>>((ref) {
-  final repo = ref.watch(workoutRepositoryProvider);
+final routinesProvider = StreamProvider<List<domain.Routine>>((ref) {
+  final repo = ref.watch(routineRepositoryProvider);
   return repo.getAllRoutines();
 });
 
 /// Actions provider for routine operations
 final routineActionsProvider = Provider<RoutineActions>((ref) {
-  final repo = ref.watch(workoutRepositoryProvider);
+  final repo = ref.watch(routineRepositoryProvider);
   return RoutineActions(repo);
 });
 
 class RoutineActions {
-  final WorkoutRepository _repo;
+  final RoutineRepository _repo;
 
   RoutineActions(this._repo);
 
-  Future<void> saveRoutine(Routine routine) async {
-    // TODO: Implement when Routine domain model persistence is complete
-    // await _repo.saveRoutine(routine);
-    throw UnimplementedError('saveRoutine not yet implemented');
+  Future<void> saveRoutine(domain.Routine routine) async {
+    final result = await _repo.saveRoutine(routine);
+    result.fold(
+      (error) => throw error,
+      (_) => null,
+    );
+  }
+
+  Future<void> updateRoutine(domain.Routine routine) async {
+    final result = await _repo.updateRoutine(routine);
+    result.fold(
+      (error) => throw error,
+      (_) => null,
+    );
   }
 
   Future<void> deleteRoutine(String routineId) async {
-    await _repo.deleteRoutine(routineId);
+    final result = await _repo.deleteRoutine(routineId);
+    result.fold(
+      (error) => throw error,
+      (_) => null,
+    );
   }
 
-  Future<Routine?> getRoutineById(String id) async {
-    return await _repo.getRoutine(id);
-  }
-
-  Stream<Routine?> watchRoutineById(String id) {
+  Stream<domain.Routine?> watchRoutineById(String id) {
     return _repo.getRoutineById(id);
   }
 
   Future<void> markRoutineUsed(String routineId) async {
-    await _repo.markRoutineUsed(routineId);
+    final result = await _repo.markRoutineUsed(routineId);
+    result.fold(
+      (error) => throw error,
+      (_) => null,
+    );
   }
 }
 
 /// Provider for a specific routine by ID
-final routineProvider = StreamProvider.family<Routine?, String>((ref, routineId) {
+final routineProvider = StreamProvider.family<domain.Routine?, String>((ref, routineId) {
   final actions = ref.watch(routineActionsProvider);
   return actions.watchRoutineById(routineId);
 });

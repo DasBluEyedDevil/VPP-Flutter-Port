@@ -1257,5 +1257,46 @@
     "timestamp": "2025-11-12T22:07:14.449935",
     "outcome": null,
     "actual_impact": null
+  },
+  {
+    "id": 35,
+    "decision": "Create RoutineRepository layer to fix Daily Routines data layer mismatch",
+    "rationale": "Daily Routines Phase 1 won't compile due to fundamental architecture issue: routine_provider returns database entities (db.Routine) but widgets expect domain models (domain.Routine). Kotlin ViewModels handled this entity\u2192model conversion, but Flutter/Riverpod providers don't have this mapping layer built in.",
+    "context": {
+      "screen": "Daily Routines (Screen 11/16)",
+      "phase": "Phase 1 - Core UI Display",
+      "blocking_errors": 6,
+      "root_cause": "Missing repository layer between database and UI",
+      "type_mismatches": [
+        "db.Routine vs domain.Routine",
+        "db.RoutineExercise vs domain.RoutineExercise"
+      ],
+      "conversions_needed": [
+        "BigInt \u2192 int",
+        "String \u2192 ProgramMode enum",
+        "int? \u2192 EccentricLoad?/EchoLevel? enums",
+        "Fetch exercises separately (not in db.Routine)"
+      ],
+      "missing_fields": [
+        "restSeconds in database schema"
+      ],
+      "chosen_approach": "Option 1: Proper repository layer with mappers"
+    },
+    "alternatives_considered": [
+      "Option 1: Create RoutineRepository with entity-to-model mapping (CHOSEN - maintains Clean Architecture, easier for Phase 2)",
+      "Option 2: Use database entities directly in UI (faster but violates Clean Architecture, harder for Phase 2)"
+    ],
+    "expected_impact": "Fixes all 6 compilation errors in Daily Routines Phase 1, establishes proper Clean Architecture pattern for future screens, makes Phase 2 implementation easier",
+    "risk_level": "medium",
+    "tags": [
+      "architecture",
+      "daily-routines",
+      "repository-pattern",
+      "clean-architecture",
+      "data-layer"
+    ],
+    "timestamp": "2025-11-12T22:29:39.100864",
+    "outcome": null,
+    "actual_impact": null
   }
 ]

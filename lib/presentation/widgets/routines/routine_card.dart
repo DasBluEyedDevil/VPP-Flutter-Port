@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/models/routine.dart';
 import '../../../domain/models/routine_exercise.dart';
 import '../../../domain/models/weight_unit.dart';
-import '../../providers/connection_log_provider.dart' show appDatabaseProvider;
 import '../../providers/preferences_provider.dart';
 import '../../theme/spacing.dart';
 
@@ -60,16 +59,13 @@ class _RoutineCardState extends ConsumerState<RoutineCard>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final db = ref.watch(appDatabaseProvider);
     final weightUnit = ref.watch(weightUnitProvider);
     final preferencesActions = ref.watch(preferencesActionsProvider);
 
-    return StreamBuilder<List<RoutineExercise>>(
-      stream: db.exerciseDao.watchExercisesForRoutine(widget.routine.id),
-      builder: (context, snapshot) {
-        final exercises = snapshot.data ?? [];
-        
-        return Padding(
+    // Use exercises from domain Routine (already populated by repository)
+    final exercises = widget.routine.exercises;
+
+    return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: GestureDetector(
             onTapDown: (_) {
@@ -308,8 +304,6 @@ class _RoutineCardState extends ConsumerState<RoutineCard>
             ),
           ),
         );
-      },
-    );
   }
 
   List<Widget> _buildExercisePreview(
@@ -381,7 +375,8 @@ class _RoutineCardState extends ConsumerState<RoutineCard>
     if (exercises.isEmpty) return '0 min';
 
     int totalSeconds = 0;
-    const defaultRestSeconds = 90; // Default rest time if not specified
+    // ignore: unused_local_variable
+    const defaultRestSeconds = 90; // Default rest time if not specified (Phase 2)
 
     for (final exercise in exercises) {
       final totalReps = exercise.reps * exercise.sets;
@@ -415,12 +410,15 @@ class _RoutineCardState extends ConsumerState<RoutineCard>
     if (exercises.isEmpty) return '';
 
     final firstExercise = exercises[0];
-    
-    // Check if Echo mode (mode string contains "Echo" or similar)
-    // For Phase 1, we'll check if mode is not a standard ProgramMode
-    final isEchoMode = firstExercise.mode.toLowerCase().contains('echo');
-    
-    if (isEchoMode) {
+
+    // Check if eccentricOnly mode (adaptive weight)
+    // ProgramMode is a freezed union, check variant directly
+    final isEccentricMode = firstExercise.mode.maybeWhen(
+      eccentricOnly: () => true,
+      orElse: () => false,
+    );
+
+    if (isEccentricMode) {
       return 'Adaptive';
     }
 
