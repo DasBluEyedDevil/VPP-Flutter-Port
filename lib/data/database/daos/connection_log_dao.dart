@@ -48,7 +48,7 @@ class ConnectionLogDao extends DatabaseAccessor<AppDatabase> with _$ConnectionLo
     final query = select(connectionLogs)
       ..orderBy([(t) => OrderingTerm.desc(t.timestamp)]);
     if (limit != null) {
-      query..limit(limit);
+      query.limit(limit);
     }
     return query.watch();
   }
@@ -58,7 +58,7 @@ class ConnectionLogDao extends DatabaseAccessor<AppDatabase> with _$ConnectionLo
     final query = select(connectionLogs)
       ..orderBy([(t) => OrderingTerm.desc(t.timestamp)]);
     if (limit != null) {
-      query..limit(limit);
+      query.limit(limit);
     }
     return query.get();
   }

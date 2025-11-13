@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart';
 
 /// Type converters for Drift database
-/// 
+///
 /// Currently, all complex types are stored as strings (text columns).
 /// Converters can be added here if needed for:
-/// - List<String> → comma-separated strings
-/// - Enum types → strings (currently handled directly)
+/// - `List<String>` to comma-separated strings
+/// - Enum types to strings (currently handled directly)
 /// - JSON serialization for complex types
 
 /// Example: String list converter (if needed)

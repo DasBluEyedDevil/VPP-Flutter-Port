@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/connection_state.dart' as domain;
 import '../../domain/models/workout_mode.dart';
-import '../../domain/models/workout_type.dart';
 import '../../domain/models/program_mode.dart' as prog;
 import '../../domain/models/echo_level.dart';
 import '../../domain/models/eccentric_load.dart';
@@ -106,8 +105,8 @@ class _JustLiftScreenState extends ConsumerState<JustLiftScreen> {
       useAutoStart: true,
     );
 
-    // Update state via notifier (using internal state setter)
-    notifier.state = currentState.copyWith(workoutParameters: newParams);
+    // Update state via notifier's public method
+    notifier.updateWorkoutParameters(newParams);
   }
 
   @override
@@ -343,7 +342,6 @@ class _JustLiftScreenState extends ConsumerState<JustLiftScreen> {
         // Overlays
         if (connectionState is domain.Connecting)
           ConnectingOverlay(
-            isConnecting: true,
             onCancel: () {
               final actions = ref.read(bleConnectionActionsProvider);
               actions.disconnect();
@@ -351,12 +349,12 @@ class _JustLiftScreenState extends ConsumerState<JustLiftScreen> {
           ),
         if (connectionState is domain.ConnectionError)
           ConnectionErrorDialog(
-            errorMessage: (connectionState as domain.ConnectionError).message,
+            message: connectionState.message,
             onRetry: () {
               final actions = ref.read(bleConnectionActionsProvider);
               actions.ensureConnection(onConnected: () {}, onFailed: () {});
             },
-            onCancel: () {
+            onDismiss: () {
               // Error state will clear automatically
             },
           ),

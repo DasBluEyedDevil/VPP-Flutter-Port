@@ -62,7 +62,7 @@ class AutoStartStopCard extends StatelessWidget {
 
     // Determine title text
     final titleText = switch ((autoStartCountdown, autoStopState.isActive, isActive, isIdle)) {
-      (int countdown, _, _, _) => 'Starting...',
+      (int countdown, _, _, _) => 'Starting in ${countdown}s...',
       (_, true, _, _) => 'Stopping in ${autoStopState.secondsRemaining}s...',
       (_, _, true, _) => 'Auto-Stop Ready',
       _ => 'Auto-Start Ready',

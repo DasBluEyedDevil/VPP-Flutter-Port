@@ -7,37 +7,39 @@ import 'package:vpp_flutter_port/presentation/theme/colors.dart';
 
 void main() {
   group('CompactNumberPicker', () {
-    testWidgets('displays current value with unit', (WidgetTester tester) async {
+    testWidgets('displays label and value with suffix', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
-              value: 10.5,
-              min: 0.0,
-              max: 100.0,
-              step: 0.5,
-              unit: 'kg',
-              onChange: (_) {},
+              label: 'Weight',
+              value: 10,
+              min: 0,
+              max: 100,
+              suffix: 'kg',
+              onChanged: (_) {},
             ),
           ),
         ),
       );
 
-      expect(find.text('10.5 kg'), findsOneWidget);
+      expect(find.text('Weight'), findsOneWidget);
+      expect(find.text('10 kg'), findsOneWidget);
     });
 
-    testWidgets('displays value without unit when unit is null', (WidgetTester tester) async {
+    testWidgets('displays value without suffix when suffix is empty', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
+              label: 'Count',
               value: 10,
               min: 0,
               max: 100,
-              step: 1,
-              onChange: (_) {},
+              suffix: '',
+              onChanged: (_) {},
             ),
           ),
         ),
@@ -47,18 +49,19 @@ void main() {
     });
 
     testWidgets('increments value when plus button is tapped', (WidgetTester tester) async {
-      double? selectedValue;
-      
+      int? selectedValue;
+
       await tester.pumpWidget(
         MaterialApp(
           theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
-              value: 10.0,
-              min: 0.0,
-              max: 100.0,
-              step: 1.0,
-              onChange: (value) => selectedValue = value,
+              label: 'Count',
+              value: 10,
+              min: 0,
+              max: 100,
+              suffix: '',
+              onChanged: (value) => selectedValue = value,
             ),
           ),
         ),
@@ -66,26 +69,27 @@ void main() {
 
       final incrementButton = find.byIcon(Icons.add);
       expect(incrementButton, findsOneWidget);
-      
+
       await tester.tap(incrementButton);
       await tester.pumpAndSettle();
 
-      expect(selectedValue, equals(11.0));
+      expect(selectedValue, equals(11));
     });
 
     testWidgets('decrements value when minus button is tapped', (WidgetTester tester) async {
-      double? selectedValue;
-      
+      int? selectedValue;
+
       await tester.pumpWidget(
         MaterialApp(
           theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
-              value: 10.0,
-              min: 0.0,
-              max: 100.0,
-              step: 1.0,
-              onChange: (value) => selectedValue = value,
+              label: 'Count',
+              value: 10,
+              min: 0,
+              max: 100,
+              suffix: '',
+              onChanged: (value) => selectedValue = value,
             ),
           ),
         ),
@@ -93,26 +97,27 @@ void main() {
 
       final decrementButton = find.byIcon(Icons.remove);
       expect(decrementButton, findsOneWidget);
-      
+
       await tester.tap(decrementButton);
       await tester.pumpAndSettle();
 
-      expect(selectedValue, equals(9.0));
+      expect(selectedValue, equals(9));
     });
 
     testWidgets('enforces min bound - decrement button disabled at min', (WidgetTester tester) async {
-      double? selectedValue;
-      
+      int? selectedValue;
+
       await tester.pumpWidget(
         MaterialApp(
           theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
-              value: 0.0,
-              min: 0.0,
-              max: 100.0,
-              step: 1.0,
-              onChange: (value) => selectedValue = value,
+              label: 'Count',
+              value: 0,
+              min: 0,
+              max: 100,
+              suffix: '',
+              onChanged: (value) => selectedValue = value,
             ),
           ),
         ),
@@ -127,18 +132,19 @@ void main() {
     });
 
     testWidgets('enforces max bound - increment button disabled at max', (WidgetTester tester) async {
-      double? selectedValue;
-      
+      int? selectedValue;
+
       await tester.pumpWidget(
         MaterialApp(
           theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
-              value: 100.0,
-              min: 0.0,
-              max: 100.0,
-              step: 1.0,
-              onChange: (value) => selectedValue = value,
+              label: 'Count',
+              value: 100,
+              min: 0,
+              max: 100,
+              suffix: '',
+              onChanged: (value) => selectedValue = value,
             ),
           ),
         ),
@@ -152,75 +158,24 @@ void main() {
       expect(selectedValue, isNull);
     });
 
-    testWidgets('supports decimal steps (0.5 increments)', (WidgetTester tester) async {
-      double? selectedValue;
-      
+    testWidgets('displays integer values correctly', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: getAppTheme(darkColorScheme),
           home: Scaffold(
             body: CompactNumberPicker(
-              value: 10.0,
-              min: 0.0,
-              max: 100.0,
-              step: 0.5,
-              onChange: (value) => selectedValue = value,
-            ),
-          ),
-        ),
-      );
-
-      final incrementButton = find.byIcon(Icons.add);
-      await tester.tap(incrementButton);
-      await tester.pumpAndSettle();
-
-      expect(selectedValue, equals(10.5));
-    });
-
-    testWidgets('displays whole numbers without decimal point', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: getAppTheme(darkColorScheme),
-          home: Scaffold(
-            body: CompactNumberPicker(
-              value: 10.0,
-              min: 0.0,
-              max: 100.0,
-              step: 1.0,
-              onChange: (_) {},
+              label: 'Count',
+              value: 10,
+              min: 0,
+              max: 100,
+              suffix: '',
+              onChanged: (_) {},
             ),
           ),
         ),
       );
 
       expect(find.text('10'), findsOneWidget);
-      expect(find.text('10.0'), findsNothing);
-    });
-
-    testWidgets('disables buttons when enabled is false', (WidgetTester tester) async {
-      double? selectedValue;
-      
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: getAppTheme(darkColorScheme),
-          home: Scaffold(
-            body: CompactNumberPicker(
-              value: 10.0,
-              min: 0.0,
-              max: 100.0,
-              step: 1.0,
-              enabled: false,
-              onChange: (value) => selectedValue = value,
-            ),
-          ),
-        ),
-      );
-
-      final incrementButton = find.byIcon(Icons.add);
-      await tester.tap(incrementButton);
-      await tester.pumpAndSettle();
-
-      expect(selectedValue, isNull);
     });
   });
 

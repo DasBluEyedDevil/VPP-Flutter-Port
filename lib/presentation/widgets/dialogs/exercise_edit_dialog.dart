@@ -96,43 +96,42 @@ class _ExerciseEditDialogState extends State<ExerciseEditDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Sets
-              _buildLabel('Sets'),
               CompactNumberPicker(
-                value: _sets.toDouble(),
+                label: 'Sets',
+                value: _sets,
                 min: 1,
                 max: 20,
-                step: 1,
-                onChange: (value) => setState(() => _sets = value.toInt()),
+                suffix: '',
+                onChanged: (value) => setState(() => _sets = value),
               ),
               const SizedBox(height: 16),
-              
+
               // Reps
-              _buildLabel('Reps'),
               CompactNumberPicker(
-                value: _reps.toDouble(),
+                label: 'Reps',
+                value: _reps,
                 min: 1,
                 max: 100,
-                step: 1,
-                onChange: (value) => setState(() => _reps = value.toInt()),
+                suffix: '',
+                onChanged: (value) => setState(() => _reps = value),
               ),
               const SizedBox(height: 16),
-              
-              // Weight per cable (kg)
-              _buildLabel('Weight per Cable (kg)'),
+
+              // Weight per cable (kg) - using half-kg units (multiply by 2)
               CompactNumberPicker(
-                value: _weightPerCableKg,
-                min: 0.0,
-                max: 100.0,
-                step: 0.5,
-                unit: 'kg',
-                onChange: (value) => setState(() => _weightPerCableKg = value),
+                label: 'Weight per Cable',
+                value: (_weightPerCableKg * 2).round(),
+                min: 0,
+                max: 200,
+                suffix: 'kg',
+                onChanged: (value) => setState(() => _weightPerCableKg = value / 2.0),
               ),
               const SizedBox(height: 16),
               
               // Program Mode
               _buildLabel('Mode'),
               DropdownButtonFormField<ProgramMode>(
-                value: _mode,
+                initialValue: _mode,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -167,7 +166,7 @@ class _ExerciseEditDialogState extends State<ExerciseEditDialog> {
               if (isEchoMode) ...[
                 _buildLabel('Eccentric Load'),
                 DropdownButtonFormField<EccentricLoad>(
-                  value: _eccentricLoad ?? EccentricLoad.load100,
+                  initialValue: _eccentricLoad ?? EccentricLoad.load100,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -185,10 +184,10 @@ class _ExerciseEditDialogState extends State<ExerciseEditDialog> {
                   },
                 ),
                 const SizedBox(height: 16),
-                
+
                 _buildLabel('Echo Level'),
                 DropdownButtonFormField<EchoLevel>(
-                  value: _echoLevel ?? EchoLevel.hard,
+                  initialValue: _echoLevel ?? EchoLevel.hard,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -208,15 +207,14 @@ class _ExerciseEditDialogState extends State<ExerciseEditDialog> {
                 const SizedBox(height: 16),
               ],
               
-              // Rest Seconds
-              _buildLabel('Rest Duration (seconds)'),
+              // Rest Duration - using 5-second increments
               CompactNumberPicker(
-                value: _restSeconds.toDouble(),
+                label: 'Rest Duration',
+                value: (_restSeconds / 5).round(),
                 min: 0,
-                max: 600,
-                step: 5,
-                unit: 's',
-                onChange: (value) => setState(() => _restSeconds = value.toInt()),
+                max: 120,
+                suffix: 's',
+                onChanged: (value) => setState(() => _restSeconds = value * 5),
               ),
             ],
           ),

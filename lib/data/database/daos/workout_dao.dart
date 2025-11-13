@@ -250,9 +250,10 @@ class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   }
 
   /// Activate a specific program (should be called after deactivateAll)
-  Future<bool> activateProgram(String programId) {
-    return (update(weeklyPrograms)..where((t) => t.id.equals(programId)))
+  Future<bool> activateProgram(String programId) async {
+    final count = await (update(weeklyPrograms)..where((t) => t.id.equals(programId)))
         .write(const WeeklyProgramsCompanion(isActive: Value(true)));
+    return count > 0;
   }
 
   /// Watch all weekly programs with days (reactive stream)

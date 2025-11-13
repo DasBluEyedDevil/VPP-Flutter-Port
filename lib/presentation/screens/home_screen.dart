@@ -34,7 +34,7 @@ class HomeScreen extends ConsumerWidget {
 
     // Get routines list
     final List<Routine> routines = routinesAsync.maybeWhen(
-      data: (routines) => routines as List<Routine>,
+      data: (routines) => routines,
       orElse: () => <Routine>[],
     );
 

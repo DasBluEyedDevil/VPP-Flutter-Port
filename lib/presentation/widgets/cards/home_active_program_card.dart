@@ -4,9 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../domain/models/weight_unit.dart';
 import '../../../domain/models/routine.dart';
 import '../../../domain/models/routine_exercise.dart';
-import '../../../domain/models/program_mode.dart';
 import '../../../data/database/daos/workout_dao.dart';
-import '../../providers/preferences_provider.dart';
 import '../../navigation/routes.dart';
 
 /// Active program card widget matching Kotlin HomeActiveProgramCard
@@ -72,20 +70,6 @@ class HomeActiveProgramCard extends ConsumerWidget {
     return '${displayValue.toStringAsFixed(1)} $unitSuffix';
   }
 
-  /// Format weight range for display
-  String _formatWeightRange(List<double> weights, WeightUnit unit) {
-    if (weights.isEmpty) return '';
-    final minWeight = weights.reduce((a, b) => a < b ? a : b);
-    final maxWeight = weights.reduce((a, b) => a > b ? a : b);
-    if (minWeight == maxWeight) {
-      return _formatWeight(minWeight, unit);
-    }
-    final minDisplay = unit == WeightUnit.lb ? minWeight * 2.20462 : minWeight;
-    final maxDisplay = unit == WeightUnit.lb ? maxWeight * 2.20462 : maxWeight;
-    final unitSuffix = unit == WeightUnit.kg ? 'kg' : 'lbs';
-    return '${minDisplay.toStringAsFixed(1)}-${maxDisplay.toStringAsFixed(1)} $unitSuffix';
-  }
-
   /// Format exercise display string
   String _formatExercise(RoutineExercise exercise, String exerciseName) {
     // Format reps: "10, 10, 12" for multiple sets
@@ -109,7 +93,6 @@ class HomeActiveProgramCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final hasWorkoutToday = _hasWorkoutToday();
     final todayRoutine = _getTodayRoutine();
-    final prefsActions = ref.watch(preferencesActionsProvider);
 
     return Card(
       elevation: 4,
@@ -147,7 +130,7 @@ class HomeActiveProgramCard extends ConsumerWidget {
                     style: theme.textTheme.bodyMedium,
                   ),
                 );
-              }).toList(),
+              }),
             if (hasWorkoutToday && todayRoutine != null) ...[
               const SizedBox(height: 16),
               // Start Routine button

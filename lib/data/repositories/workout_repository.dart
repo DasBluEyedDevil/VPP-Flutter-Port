@@ -225,7 +225,7 @@ class WorkoutRepository {
             name: programWithDays.program.name,
             createdAt: programWithDays.program.createdAt,
             lastUsed: programWithDays.program.lastUsed,
-            isActive: programWithDays.program.isActive,
+            isActive: Value(programWithDays.program.isActive),
           ),
         );
       }

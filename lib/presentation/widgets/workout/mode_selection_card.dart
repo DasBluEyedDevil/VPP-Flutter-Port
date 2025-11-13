@@ -165,7 +165,6 @@ class _ModeSelectionCardState extends State<ModeSelectionCard>
         }
       },
       labelStyle: theme.textTheme.bodySmall?.copyWith(
-        maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
     );
