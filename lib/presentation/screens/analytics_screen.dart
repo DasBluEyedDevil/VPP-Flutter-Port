@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/workout_history_provider.dart';
-import '../widgets/charts/analytics_charts.dart';
-import '../widgets/common/empty_state.dart';
-import '../theme/spacing.dart';
-import '../../domain/models/workout_session.dart';
+import '../widgets/pr/personal_bests_tab.dart';
+import '../widgets/pr/trends_tab.dart';
+import '../screens/history_tab.dart';
 
-/// Analytics screen with tabs for Volume, Frequency, and Distribution charts.
+/// Analytics screen with three tabs: History, Personal Bests, and Trends.
+/// 
+/// Provides comprehensive view of workout data and progress.
+/// Ported from Kotlin AnalyticsScreen.kt
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
 
@@ -17,133 +18,117 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
 class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _dateRange = 30; // days (0 = all time)
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _pageController = PageController();
+    
+    // Sync tab controller with page controller
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        _pageController.animateToPage(
+          _tabController.index,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
+  void _onPageChanged(int index) {
+    if (_tabController.index != index) {
+      _tabController.animateTo(index);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final workoutsAsync = ref.watch(workoutHistoryProvider);
+    final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Analytics'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Volume'),
-            Tab(text: 'Frequency'),
-            Tab(text: 'Distribution'),
-          ],
-        ),
-        actions: [
-          PopupMenuButton<int>(
-            initialValue: _dateRange,
-            onSelected: (days) => setState(() => _dateRange = days),
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 7, child: Text('Last 7 days')),
-              PopupMenuItem(value: 30, child: Text('Last 30 days')),
-              PopupMenuItem(value: 90, child: Text('Last 90 days')),
-              PopupMenuItem(value: 0, child: Text('All time')),
+    // Background gradient matching Kotlin implementation
+    final backgroundGradient = theme.brightness == Brightness.dark
+        ? LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF0F172A), // slate-900
+              const Color(0xFF1E1B4B), // indigo-950
+              const Color(0xFF172554), // blue-950
             ],
-          ),
-        ],
-      ),
-      body: workoutsAsync.when(
-        data: (workouts) {
-          final filtered = _filterByDateRange(workouts, _dateRange);
-          
-          if (filtered.isEmpty) {
-            return const EmptyState(
-              icon: Icons.bar_chart,
-              title: 'No Data',
-              message: 'No workout data available for the selected date range',
-            );
-          }
-
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _VolumeTab(workouts: filtered),
-              _FrequencyTab(workouts: filtered),
-              _DistributionTab(workouts: filtered),
+          )
+        : LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFFE0E7FF), // indigo-200 - soft lavender
+              const Color(0xFFFCE7F3), // pink-100 - soft pink
+              const Color(0xFFDDD6FE), // violet-200 - soft violet
             ],
           );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: AppSpacing.medium),
-              Text('Error loading analytics: $error'),
+
+    return Container(
+      decoration: BoxDecoration(gradient: backgroundGradient),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: const Text('Analytics'),
+          bottom: TabBar(
+            controller: _tabController,
+            indicator: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(3),
+              ),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF9333EA), // purple-600
+                  const Color(0xFF7E22CE), // purple-700
+                ],
+              ),
+            ),
+            indicatorSize: TabBarIndicatorSize.tab,
+            labelColor: theme.colorScheme.primary,
+            unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+            tabs: const [
+              Tab(
+                icon: Icon(Icons.list),
+                text: 'History',
+              ),
+              Tab(
+                icon: Icon(Icons.star),
+                text: 'Personal Bests',
+              ),
+              Tab(
+                icon: Icon(Icons.info_outline),
+                text: 'Trends',
+              ),
             ],
           ),
+        ),
+        body: PageView(
+          controller: _pageController,
+          onPageChanged: _onPageChanged,
+          children: const [
+            // Tab 1: History
+            HistoryTab(),
+            // Tab 2: Personal Bests
+            PersonalBestsTab(),
+            // Tab 3: Trends
+            TrendsTab(),
+          ],
         ),
       ),
     );
   }
-
-  List<WorkoutSession> _filterByDateRange(List<WorkoutSession> workouts, int days) {
-    if (days == 0) return workouts;
-    
-    final cutoffDate = DateTime.now().subtract(Duration(days: days));
-    final cutoffTimestamp = cutoffDate.millisecondsSinceEpoch;
-    
-    return workouts.where((w) => w.timestamp >= cutoffTimestamp).toList();
-  }
 }
-
-class _VolumeTab extends StatelessWidget {
-  final List<WorkoutSession> workouts;
-
-  const _VolumeTab({required this.workouts});
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.medium),
-      child: AnalyticsCharts(workoutHistory: workouts),
-    );
-  }
-}
-
-class _FrequencyTab extends StatelessWidget {
-  final List<WorkoutSession> workouts;
-
-  const _FrequencyTab({required this.workouts});
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.medium),
-      child: AnalyticsCharts(workoutHistory: workouts),
-    );
-  }
-}
-
-class _DistributionTab extends StatelessWidget {
-  final List<WorkoutSession> workouts;
-
-  const _DistributionTab({required this.workouts});
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.medium),
-      child: AnalyticsCharts(workoutHistory: workouts),
-    );
-  }
-}
-
