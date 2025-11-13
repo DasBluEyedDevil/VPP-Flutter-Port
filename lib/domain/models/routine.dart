@@ -11,6 +11,7 @@ class Routine with _$Routine {
   const factory Routine({
     required String id,
     required String name,
+    @Default('') String description, // Optional description for Phase 2
     required int createdAt,
     required int lastUsed,
     required int exerciseCount,

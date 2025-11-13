@@ -19,6 +19,8 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$Routine {
   String get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
+  String get description =>
+      throw _privateConstructorUsedError; // Optional description for Phase 2
   int get createdAt => throw _privateConstructorUsedError;
   int get lastUsed => throw _privateConstructorUsedError;
   int get exerciseCount => throw _privateConstructorUsedError;
@@ -38,6 +40,7 @@ abstract class $RoutineCopyWith<$Res> {
   $Res call({
     String id,
     String name,
+    String description,
     int createdAt,
     int lastUsed,
     int exerciseCount,
@@ -62,6 +65,7 @@ class _$RoutineCopyWithImpl<$Res, $Val extends Routine>
   $Res call({
     Object? id = null,
     Object? name = null,
+    Object? description = null,
     Object? createdAt = null,
     Object? lastUsed = null,
     Object? exerciseCount = null,
@@ -76,6 +80,10 @@ class _$RoutineCopyWithImpl<$Res, $Val extends Routine>
             name: null == name
                 ? _value.name
                 : name // ignore: cast_nullable_to_non_nullable
+                      as String,
+            description: null == description
+                ? _value.description
+                : description // ignore: cast_nullable_to_non_nullable
                       as String,
             createdAt: null == createdAt
                 ? _value.createdAt
@@ -110,6 +118,7 @@ abstract class _$$RoutineImplCopyWith<$Res> implements $RoutineCopyWith<$Res> {
   $Res call({
     String id,
     String name,
+    String description,
     int createdAt,
     int lastUsed,
     int exerciseCount,
@@ -133,6 +142,7 @@ class __$$RoutineImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? name = null,
+    Object? description = null,
     Object? createdAt = null,
     Object? lastUsed = null,
     Object? exerciseCount = null,
@@ -147,6 +157,10 @@ class __$$RoutineImplCopyWithImpl<$Res>
         name: null == name
             ? _value.name
             : name // ignore: cast_nullable_to_non_nullable
+                  as String,
+        description: null == description
+            ? _value.description
+            : description // ignore: cast_nullable_to_non_nullable
                   as String,
         createdAt: null == createdAt
             ? _value.createdAt
@@ -175,6 +189,7 @@ class _$RoutineImpl implements _Routine {
   const _$RoutineImpl({
     required this.id,
     required this.name,
+    this.description = '',
     required this.createdAt,
     required this.lastUsed,
     required this.exerciseCount,
@@ -185,6 +200,10 @@ class _$RoutineImpl implements _Routine {
   final String id;
   @override
   final String name;
+  @override
+  @JsonKey()
+  final String description;
+  // Optional description for Phase 2
   @override
   final int createdAt;
   @override
@@ -202,7 +221,7 @@ class _$RoutineImpl implements _Routine {
 
   @override
   String toString() {
-    return 'Routine(id: $id, name: $name, createdAt: $createdAt, lastUsed: $lastUsed, exerciseCount: $exerciseCount, exercises: $exercises)';
+    return 'Routine(id: $id, name: $name, description: $description, createdAt: $createdAt, lastUsed: $lastUsed, exerciseCount: $exerciseCount, exercises: $exercises)';
   }
 
   @override
@@ -212,6 +231,8 @@ class _$RoutineImpl implements _Routine {
             other is _$RoutineImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
+            (identical(other.description, description) ||
+                other.description == description) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.lastUsed, lastUsed) ||
@@ -229,6 +250,7 @@ class _$RoutineImpl implements _Routine {
     runtimeType,
     id,
     name,
+    description,
     createdAt,
     lastUsed,
     exerciseCount,
@@ -248,6 +270,7 @@ abstract class _Routine implements Routine {
   const factory _Routine({
     required final String id,
     required final String name,
+    final String description,
     required final int createdAt,
     required final int lastUsed,
     required final int exerciseCount,
@@ -258,6 +281,8 @@ abstract class _Routine implements Routine {
   String get id;
   @override
   String get name;
+  @override
+  String get description; // Optional description for Phase 2
   @override
   int get createdAt;
   @override

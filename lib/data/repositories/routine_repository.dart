@@ -166,6 +166,7 @@ class RoutineRepository {
     return domain.Routine(
       id: dbRoutine.id,
       name: dbRoutine.name,
+      description: '', // Phase 2: Description field not in database yet
       createdAt: dbRoutine.createdAt.toInt(),
       lastUsed: dbRoutine.lastUsed.toInt(),
       exerciseCount: dbRoutine.exerciseCount,
