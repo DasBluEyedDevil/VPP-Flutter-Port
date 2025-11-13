@@ -5,10 +5,11 @@ import 'workout_session_provider.dart'; // Import to reuse workoutRepositoryProv
 
 /// Stream provider for workout history
 ///
-/// Ported from MainViewModel.kt workoutHistory (lines 98-110)
+/// Ported from MainViewModel.kt workoutHistory (lines 340-345)
+/// Loads only the 20 most recent sessions (not all workouts)
 final workoutHistoryProvider = StreamProvider<List<WorkoutSession>>((ref) {
   final repo = ref.watch(workoutRepositoryProvider);
-  return repo.getAllSessions();
+  return repo.getRecentSessions(limit: 20);
 });
 
 /// Actions provider for workout history operations

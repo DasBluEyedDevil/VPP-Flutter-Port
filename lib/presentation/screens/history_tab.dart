@@ -1,33 +1,159 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/workout_history_provider.dart';
+import '../providers/preferences_provider.dart';
+import '../providers/connection_log_provider.dart' show appDatabaseProvider;
 import '../widgets/common/empty_state.dart';
+import '../widgets/common/refresh_button.dart';
+import '../widgets/workout/workout_history_card.dart';
 import '../theme/spacing.dart';
-import '../../domain/models/workout_session.dart';
-import 'package:intl/intl.dart';
+import '../../data/repositories/exercise_repository.dart';
+
+/// Provider for exercise repository (reused pattern from daily_routines_screen)
+final exerciseRepositoryProvider = Provider<ExerciseRepository>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return ExerciseRepositoryImpl(db.exerciseDao);
+});
+
+/// Provider that batches exercise name lookups for all workout sessions
+///
+/// CRITICAL OPTIMIZATION: Fetches all exercise names in one batch instead of
+/// per-card queries (avoids 20 duplicate DB queries for same exercise)
+final exerciseNameMapProvider = FutureProvider.family<Map<String, String>, List<String>>((ref, exerciseIds) async {
+  if (exerciseIds.isEmpty) return {};
+  
+  final repo = ref.watch(exerciseRepositoryProvider);
+  final uniqueIds = exerciseIds.toSet().toList();
+  
+  // Batch fetch all unique exercise IDs
+  final Map<String, String> nameMap = {};
+  for (final id in uniqueIds) {
+    try {
+      final exercise = await repo.getExerciseById(id);
+      if (exercise != null) {
+        nameMap[id] = exercise.name;
+      }
+    } catch (e) {
+      // Silently fail - will default to "Just Lift" in card
+    }
+  }
+  
+  return nameMap;
+});
 
 /// History tab screen displaying workout history list.
+///
+/// Ported from Kotlin HistoryTab composable (lines 38-113).
+/// Displays scrollable list of completed workout sessions with metrics.
 class HistoryTab extends ConsumerWidget {
   const HistoryTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final workoutsAsync = ref.watch(workoutHistoryProvider);
+    final weightUnit = ref.watch(weightUnitProvider);
+    final formatWeight = ref.watch(preferencesActionsProvider).formatWeight;
+    final historyActions = ref.watch(workoutHistoryActionsProvider);
 
     return workoutsAsync.when(
       data: (workouts) {
+        // Extract unique exercise IDs for batch fetching
+        final exerciseIds = workouts
+            .where((w) => w.exerciseId != null)
+            .map((w) => w.exerciseId!)
+            .toList();
+        
+        // Batch fetch exercise names
+        final exerciseNamesAsync = ref.watch(exerciseNameMapProvider(exerciseIds));
+
         if (workouts.isEmpty) {
           return const EmptyState(
             icon: Icons.history,
-            title: 'No Workout History',
-            message: 'Complete your first workout to see it here!',
+            title: 'No Workout History Yet',
+            message: 'Complete your first workout to see it here',
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(AppSpacing.small),
-          itemCount: workouts.length,
-          itemBuilder: (context, index) => _WorkoutHistoryCard(workout: workouts[index]),
+        return Column(
+          children: [
+            // Header Row: Title + Refresh Button
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.medium), // 16dp
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Title (headlineMedium Bold)
+                  Text(
+                    'Workout History',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  // Refresh Button
+                  RefreshButton(
+                    onRefresh: () {
+                      // Refresh is cosmetic - StreamProvider auto-updates when DB changes
+                      // Could trigger a manual refresh here if needed
+                    },
+                  ),
+                ],
+              ),
+            ),
+            // Workout List
+            Expanded(
+              child: exerciseNamesAsync.when(
+                data: (exerciseNameMap) => ListView.separated(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.medium, // 16dp
+                  ),
+                  itemCount: workouts.length,
+                  separatorBuilder: (context, index) => const SizedBox(
+                    height: AppSpacing.small, // 8dp spacing between cards
+                  ),
+                  itemBuilder: (context, index) {
+                    final workout = workouts[index];
+                    final exerciseName = workout.exerciseId != null
+                        ? exerciseNameMap[workout.exerciseId]
+                        : null;
+
+                    return WorkoutHistoryCard(
+                      session: workout,
+                      weightUnit: weightUnit,
+                      formatWeight: formatWeight,
+                      exerciseName: exerciseName,
+                      onDelete: () {
+                        historyActions.deleteWorkoutSession(workout.id);
+                      },
+                    );
+                  },
+                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (_, __) => ListView.separated(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.medium,
+                  ),
+                  itemCount: workouts.length,
+                  separatorBuilder: (context, index) => const SizedBox(
+                    height: AppSpacing.small,
+                  ),
+                  itemBuilder: (context, index) {
+                    final workout = workouts[index];
+                    return WorkoutHistoryCard(
+                      session: workout,
+                      weightUnit: weightUnit,
+                      formatWeight: formatWeight,
+                      exerciseName: null, // Fallback to "Just Lift" on error
+                      onDelete: () {
+                        historyActions.deleteWorkoutSession(workout.id);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -35,150 +161,21 @@ class HistoryTab extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: theme.colorScheme.error,
+            ),
             const SizedBox(height: AppSpacing.medium),
-            Text('Error loading workout history: $error'),
+            Text(
+              'Error loading workout history: $error',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _WorkoutHistoryCard extends StatelessWidget {
-  final WorkoutSession workout;
-
-  const _WorkoutHistoryCard({required this.workout});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dateTime = DateTime.fromMillisecondsSinceEpoch(workout.timestamp);
-    final dateFormat = DateFormat('MMM d, yyyy');
-    final timeFormat = DateFormat('h:mm a');
-    
-    // Calculate duration in minutes
-    final durationMinutes = workout.duration ~/ 60;
-    final durationSeconds = workout.duration % 60;
-    final durationText = durationMinutes > 0 
-        ? '${durationMinutes}m ${durationSeconds}s'
-        : '${durationSeconds}s';
-
-    // Calculate volume (weight × reps × 2 cables)
-    final volume = workout.weightPerCableKg * workout.totalReps * 2;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.small),
-      child: InkWell(
-        onTap: () {
-          // TODO: Navigate to workout detail screen
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.medium),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          workout.mode,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.extraSmall),
-                        Text(
-                          '${dateFormat.format(dateTime)} • ${timeFormat.format(dateTime)}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (workout.isJustLift)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'Just Lift',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.medium),
-              Row(
-                children: [
-                  _MetricChip(
-                    icon: Icons.repeat,
-                    label: '${workout.totalReps} reps',
-                    theme: theme,
-                  ),
-                  const SizedBox(width: AppSpacing.small),
-                  _MetricChip(
-                    icon: Icons.scale,
-                    label: '${volume.toStringAsFixed(0)} kg',
-                    theme: theme,
-                  ),
-                  const SizedBox(width: AppSpacing.small),
-                  _MetricChip(
-                    icon: Icons.timer,
-                    label: durationText,
-                    theme: theme,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MetricChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final ThemeData theme;
-
-  const _MetricChip({
-    required this.icon,
-    required this.label,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
       ),
     );
   }
