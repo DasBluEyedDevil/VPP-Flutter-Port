@@ -3,6 +3,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/preferences/preferences_manager.dart';
 import '../../domain/models/user_preferences.dart';
 import '../../domain/models/weight_unit.dart';
+import 'workout_session_provider.dart' show workoutRepositoryProvider;
+import 'ble_connection_provider.dart' show bleRepositoryProvider;
+import '../../data/repositories/workout_repository.dart';
+import '../../data/repositories/ble_repository.dart';
 
 /// Provider for SharedPreferences instance
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
@@ -72,7 +76,9 @@ final autoplayEnabledProvider = Provider<bool>((ref) {
 /// Actions provider for updating preferences
 final preferencesActionsProvider = Provider<PreferencesActions>((ref) {
   final prefsManager = ref.watch(preferencesManagerProvider);
-  return PreferencesActions(prefsManager);
+  final workoutRepo = ref.watch(workoutRepositoryProvider);
+  final bleRepo = ref.watch(bleRepositoryProvider);
+  return PreferencesActions(prefsManager, workoutRepo, bleRepo);
 });
 
 /// Actions class for preference updates
@@ -80,8 +86,10 @@ final preferencesActionsProvider = Provider<PreferencesActions>((ref) {
 /// Ported from MainViewModel.kt preference methods (lines 1403-1421)
 class PreferencesActions {
   final PreferencesManager _prefsManager;
+  final WorkoutRepository _workoutRepo;
+  final BleRepository _bleRepo;
 
-  PreferencesActions(this._prefsManager);
+  PreferencesActions(this._prefsManager, this._workoutRepo, this._bleRepo);
 
   /// Update weight unit preference
   Future<void> setWeightUnit(WeightUnit unit) async {
@@ -134,5 +142,27 @@ class PreferencesActions {
     final displayValue = kgToDisplay(kg, unit);
     final unitSuffix = unit == WeightUnit.kg ? 'kg' : 'lb';
     return '${displayValue.toStringAsFixed(1)} $unitSuffix';
+  }
+
+  /// Delete all workouts
+  ///
+  /// Ported from SettingsViewModel.kt deleteAllWorkouts method
+  Future<void> deleteAllWorkouts() async {
+    await _workoutRepo.deleteAllWorkouts();
+  }
+
+  /// Send color scheme command to BLE device
+  ///
+  /// Ported from SettingsViewModel.kt sendColorSchemeCommand method
+  /// [colorIndex] should be 0-6 (Blue, Green, Teal, Yellow, Pink, Red, Purple)
+  Future<void> sendColorSchemeCommand(int colorIndex) async {
+    if (colorIndex < 0 || colorIndex > 6) {
+      throw ArgumentError('Color index must be 0-6');
+    }
+    final result = await _bleRepo.setColorScheme(colorIndex);
+    result.fold(
+      (error) => throw error,
+      (_) => null,
+    );
   }
 }
