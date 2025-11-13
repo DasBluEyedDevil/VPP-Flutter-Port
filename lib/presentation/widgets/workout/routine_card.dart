@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../data/database/app_database.dart';
+import '../../../domain/models/routine.dart' as domain;
+import '../../../domain/models/routine_exercise.dart' as domain_ex;
 
 /// Routine card widget displaying routine information with gradient icon and animations.
 /// 
@@ -9,7 +10,7 @@ import '../../../data/database/app_database.dart';
 /// - Content: name, description, metadata row, exercise preview
 /// - Overflow menu: Edit, Duplicate, Delete
 class RoutineCard extends StatefulWidget {
-  final Routine routine;
+  final domain.Routine routine;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDuplicate;
@@ -281,15 +282,14 @@ String formatSetReps(List<int> reps) {
 /// Helper function to format estimated duration
 /// Formula: totalReps × 3 seconds + (sets × restTime)
 /// Note: Database RoutineExercise doesn't have restSeconds, using default 90s
-String formatEstimatedDuration(List<RoutineExercise> exercises) {
+String formatEstimatedDuration(List<domain_ex.RoutineExercise> exercises) {
   if (exercises.isEmpty) return '0 min';
 
   int totalSeconds = 0;
-  const defaultRestSeconds = 90; // Default rest time if not specified
   for (final exercise in exercises) {
     final totalReps = exercise.reps * exercise.sets; // Total reps for this exercise
     totalSeconds += totalReps * 3; // 3 seconds per rep
-    totalSeconds += exercise.sets * defaultRestSeconds; // rest between sets (default 90s)
+    totalSeconds += exercise.sets * exercise.restSeconds; // rest between sets (default 90s)
   }
 
   final minutes = totalSeconds ~/ 60;
@@ -304,7 +304,7 @@ String formatEstimatedDuration(List<RoutineExercise> exercises) {
 
 /// Helper function to format exercise preview
 /// Shows first 4 exercise IDs + remainder count
-String formatExercisePreview(List<RoutineExercise> exercises) {
+String formatExercisePreview(List<domain_ex.RoutineExercise> exercises) {
   if (exercises.isEmpty) return 'No exercises';
 
   final preview = exercises.take(4).map((e) => e.exerciseId).join(', ');
@@ -315,6 +315,6 @@ String formatExercisePreview(List<RoutineExercise> exercises) {
 
 /// Helper function to format set/reps for a single exercise
 /// Converts sets × reps to format like "3×10" (for 3 sets of 10 reps)
-String formatSetRepsForExercise(RoutineExercise exercise) {
+String formatSetRepsForExercise(domain_ex.RoutineExercise exercise) {
   return '${exercise.sets}×${exercise.reps}';
 }

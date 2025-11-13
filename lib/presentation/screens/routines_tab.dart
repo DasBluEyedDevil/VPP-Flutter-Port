@@ -7,7 +7,7 @@ import '../widgets/common/empty_state.dart';
 import '../widgets/dialogs/routine_builder_dialog.dart';
 import '../widgets/workout/routine_card.dart';
 import '../theme/spacing.dart';
-import '../../data/database/app_database.dart';
+import '../../domain/models/routine.dart' as domain;
 
 /// Routines tab screen displaying list of workout routines.
 /// 
@@ -113,17 +113,16 @@ class RoutinesTab extends ConsumerWidget {
     );
   }
 
-  Future<void> _showRoutineBuilder(BuildContext context, WidgetRef ref, Routine? routine) async {
-    // TODO: Get exercises from exercise provider/repository
-    final exercises = <Exercise>[];
+  Future<void> _showRoutineBuilder(BuildContext context, WidgetRef ref, domain.Routine? routine) async {
+    // TODO: Get exercises from exercise provider/repository (Phase 2)
+    // For now, pass empty list - builder dialog will handle it
+    return; // Temporarily disabled until Phase 2
 
-    // TODO: Convert database Routine to domain Routine before passing to dialog
-    // The dialog expects domain.Routine, but we have database Routine from provider
-    // Need to implement conversion logic or refactor dialog to accept database type
+    // ignore: dead_code
     await RoutineBuilderDialog.show(
       context,
-      routine: null, // Placeholder - needs conversion from database Routine
-      exercises: exercises,
+      routine: routine,
+      exercises: const [],
       onSave: (savedRoutine) {
         // TODO: Save routine via routineActionsProvider
         if (context.mounted) {
@@ -137,7 +136,7 @@ class RoutinesTab extends ConsumerWidget {
     );
   }
 
-  void _startWorkout(BuildContext context, WidgetRef ref, Routine routine) {
+  void _startWorkout(BuildContext context, WidgetRef ref, domain.Routine routine) {
     // TODO: Implement navigation to ActiveWorkoutScreen (separate task)
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Starting workout: ${routine.name}')),
@@ -147,8 +146,8 @@ class RoutinesTab extends ConsumerWidget {
   void _duplicateRoutine(
     BuildContext context,
     WidgetRef ref,
-    Routine routine,
-    List<Routine> allRoutines,
+    domain.Routine routine,
+    List<domain.Routine> allRoutines,
     RoutineActions actions,
   ) {
     // Smart duplicate with "(Copy N)" naming
@@ -159,7 +158,7 @@ class RoutinesTab extends ConsumerWidget {
     );
   }
 
-  Routine _createSmartDuplicate(Routine original, List<Routine> existingRoutines) {
+  domain.Routine _createSmartDuplicate(domain.Routine original, List<domain.Routine> existingRoutines) {
     // Extract base name and find highest (Copy N)
     final baseName = _extractBaseName(original.name);
     final nextCopyNumber = _findNextCopyNumber(baseName, existingRoutines);
@@ -170,11 +169,11 @@ class RoutinesTab extends ConsumerWidget {
 
     // Generate new UUID for routine
     const uuid = Uuid();
-    return Routine(
+    return domain.Routine(
       id: uuid.v4(),
       name: newName,
-      createdAt: BigInt.from(DateTime.now().millisecondsSinceEpoch),
-      lastUsed: BigInt.zero,
+      createdAt: DateTime.now().millisecondsSinceEpoch,
+      lastUsed: 0,
       exerciseCount: original.exerciseCount,
     );
   }
@@ -185,7 +184,7 @@ class RoutinesTab extends ConsumerWidget {
     return name.replaceAll(copyPattern, '').trim();
   }
 
-  int _findNextCopyNumber(String baseName, List<Routine> routines) {
+  int _findNextCopyNumber(String baseName, List<domain.Routine> routines) {
     final copyPattern = RegExp(r'\(Copy\s*(\d*)\)$');
     final copyNumbers = <int>[0]; // Start with 0 (base case: first copy)
 
@@ -206,7 +205,7 @@ class RoutinesTab extends ConsumerWidget {
   Future<void> _confirmDeleteRoutine(
     BuildContext context,
     WidgetRef ref,
-    Routine routine,
+    domain.Routine routine,
     RoutineActions actions,
   ) async {
     final confirmed = await showDialog<bool>(
