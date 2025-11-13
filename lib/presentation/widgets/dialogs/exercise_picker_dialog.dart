@@ -1,40 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/database/app_database.dart';
+import '../../../data/repositories/exercise_repository.dart';
+import '../../providers/connection_log_provider.dart' show appDatabaseProvider;
+import '../../theme/spacing.dart';
 
-/// Dialog for selecting exercises from the exercise library
-/// 
-/// Displays a searchable list of exercises with checkboxes for multi-select.
-/// Returns a list of selected exercise IDs when confirmed.
-class ExercisePickerDialog extends StatefulWidget {
-  /// List of all available exercises
-  final List<Exercise> exercises;
-  
-  /// Currently selected exercise IDs
+/// Exercise picker dialog for selecting an exercise from the library.
+///
+/// Displays a searchable list of exercises. User can select an exercise
+/// to use in workout configuration.
+class ExercisePickerDialog extends ConsumerStatefulWidget {
+  /// Currently selected exercise IDs (for highlighting)
   final Set<String> selectedIds;
-  
+
   /// Callback when user confirms selection
-  final ValueChanged<List<String>> onConfirm;
+  final ValueChanged<Set<String>> onConfirm;
 
   const ExercisePickerDialog({
     super.key,
-    required this.exercises,
     required this.selectedIds,
     required this.onConfirm,
   });
 
   /// Show the dialog and return selected exercise IDs
-  /// 
-  /// Returns list of selected exercise IDs if confirmed, null if cancelled.
-  static Future<List<String>?> show(
+  static Future<Set<String>?> show(
     BuildContext context, {
-    required List<Exercise> exercises,
     required Set<String> selectedIds,
-    required ValueChanged<List<String>> onConfirm,
+    required ValueChanged<Set<String>> onConfirm,
   }) {
-    return showDialog<List<String>>(
+    return showDialog<Set<String>>(
       context: context,
       builder: (context) => ExercisePickerDialog(
-        exercises: exercises,
         selectedIds: selectedIds,
         onConfirm: onConfirm,
       ),
@@ -42,20 +38,23 @@ class ExercisePickerDialog extends StatefulWidget {
   }
 
   @override
-  State<ExercisePickerDialog> createState() => _ExercisePickerDialogState();
+  ConsumerState<ExercisePickerDialog> createState() => _ExercisePickerDialogState();
 }
 
-class _ExercisePickerDialogState extends State<ExercisePickerDialog> {
-  late Set<String> _selectedIds;
-  late List<Exercise> _filteredExercises;
+class _ExercisePickerDialogState extends ConsumerState<ExercisePickerDialog> {
   final TextEditingController _searchController = TextEditingController();
+  Set<String> _selectedIds = {};
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _selectedIds = Set.from(widget.selectedIds);
-    _filteredExercises = List.from(widget.exercises);
-    _searchController.addListener(_filterExercises);
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
   }
 
   @override
@@ -64,53 +63,28 @@ class _ExercisePickerDialogState extends State<ExercisePickerDialog> {
     super.dispose();
   }
 
-  void _filterExercises() {
-    final query = _searchController.text.toLowerCase();
-    setState(() {
-      if (query.isEmpty) {
-        _filteredExercises = List.from(widget.exercises);
-      } else {
-        _filteredExercises = widget.exercises.where((exercise) {
-          return exercise.name.toLowerCase().contains(query) ||
-              (exercise.category?.toLowerCase().contains(query) ?? false) ||
-              (exercise.muscleGroups?.toLowerCase().contains(query) ?? false);
-        }).toList();
-      }
-    });
-  }
-
-  void _toggleSelection(String exerciseId) {
-    setState(() {
-      if (_selectedIds.contains(exerciseId)) {
-        _selectedIds.remove(exerciseId);
-      } else {
-        _selectedIds.add(exerciseId);
-      }
-    });
-  }
-
-  void _handleConfirm() {
-    final selected = _selectedIds.toList();
-    Navigator.of(context).pop(selected);
-    widget.onConfirm(selected);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    // Watch exercises stream with search filter
+    final exercisesAsync = ref.watch(exercisesStreamProvider(_searchQuery));
+
     return AlertDialog(
-      title: const Text('Select Exercises'),
+      title: const Text('Select Exercise'),
       content: SizedBox(
         width: double.maxFinite,
+        height: 400,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Search bar
+            // Search field
             TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search exercises...',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
+                suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
                         onPressed: () {
@@ -118,72 +92,153 @@ class _ExercisePickerDialogState extends State<ExercisePickerDialog> {
                         },
                       )
                     : null,
-                border: const OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.medium),
             
             // Exercise list
-            Flexible(
-              child: _filteredExercises.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Text(
-                          'No exercises found',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
+            Expanded(
+              child: exercisesAsync.when(
+                data: (exercises) {
+                  if (exercises.isEmpty) {
+                    return Center(
+                      child: Text(
+                        _searchQuery.isEmpty
+                            ? 'No exercises available'
+                            : 'No exercises found',
+                        style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                       ),
-                    )
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _filteredExercises.length,
-                      itemBuilder: (context, index) {
-                        final exercise = _filteredExercises[index];
-                        final isSelected = _selectedIds.contains(exercise.id);
-                        
-                        return CheckboxListTile(
-                          value: isSelected,
-                          onChanged: (_) => _toggleSelection(exercise.id),
-                          title: Text(exercise.name),
-                          subtitle: exercise.category != null
-                              ? Text(
-                                  exercise.category!,
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                )
-                              : null,
-                          dense: true,
-                        );
-                      },
-                    ),
-            ),
-            
-            // Selection count
-            if (_selectedIds.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  '${_selectedIds.length} selected',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
+                    );
+                  }
+                  return ListView.separated(
+                    itemCount: exercises.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.extraSmall),
+                    itemBuilder: (context, index) {
+                      final exercise = exercises[index];
+                      final isSelected = _selectedIds.contains(exercise.id);
+                      return _buildExerciseCard(context, theme, exercise, isSelected);
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Text(
+                    'Error loading exercises: $error',
+                    style: TextStyle(color: theme.colorScheme.error),
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(
+            'Cancel',
+            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+          ),
         ),
         FilledButton(
-          onPressed: _selectedIds.isEmpty ? null : _handleConfirm,
-          child: const Text('Confirm'),
+          onPressed: _selectedIds.isEmpty
+              ? null
+              : () {
+                  widget.onConfirm(_selectedIds);
+                  Navigator.of(context).pop(_selectedIds);
+                },
+          child: const Text('Select'),
         ),
       ],
     );
   }
+
+  Widget _buildExerciseCard(
+    BuildContext context,
+    ThemeData theme,
+    Exercise exercise,
+    bool isSelected,
+  ) {
+    return Card(
+      color: isSelected
+          ? theme.colorScheme.primaryContainer
+          : theme.colorScheme.surfaceContainerHighest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: isSelected
+            ? BorderSide(color: theme.colorScheme.primary, width: 2)
+            : BorderSide.none,
+      ),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            if (isSelected) {
+              _selectedIds.remove(exercise.id);
+            } else {
+              // Single selection mode - clear previous and select new
+              _selectedIds.clear();
+              _selectedIds.add(exercise.id);
+            }
+          });
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.medium),
+          child: Row(
+            children: [
+              // Exercise info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      exercise.name,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isSelected
+                            ? theme.colorScheme.onPrimaryContainer
+                            : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    if (exercise.muscleGroups != null && exercise.muscleGroups!.isNotEmpty)
+                      Text(
+                        exercise.muscleGroups!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isSelected
+                              ? theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              
+              // Selection indicator
+              if (isSelected)
+                Icon(
+                  Icons.check_circle,
+                  color: theme.colorScheme.primary,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
+
+/// Provider for exercise repository
+final exerciseRepositoryProvider = Provider<ExerciseRepository>((ref) {
+  final database = ref.watch(appDatabaseProvider);
+  return ExerciseRepositoryImpl(database.exerciseDao);
+});
+
+/// Provider for exercises stream with search filter
+final exercisesStreamProvider = StreamProvider.family<List<Exercise>, String>((ref, query) {
+  final repository = ref.watch(exerciseRepositoryProvider);
+  if (query.trim().isEmpty) {
+    return repository.getAllExercises();
+  } else {
+    return repository.searchExercises(query);
+  }
+});

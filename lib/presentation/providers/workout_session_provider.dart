@@ -507,6 +507,13 @@ class WorkoutSessionNotifier extends StateNotifier<WorkoutSessionState> {
     );
   }
 
+  /// Update workout parameters
+  /// 
+  /// Used to configure workout parameters before starting a workout
+  void updateWorkoutParameters(WorkoutParameters parameters) {
+    state = state.copyWith(workoutParameters: parameters);
+  }
+
   /// Load routine and configure workout parameters
   /// 
   /// Ported from MainViewModel.kt loadRoutine() (lines 1525-1568)
@@ -655,4 +662,5 @@ class WorkoutSessionActions {
   void cancelAutoStartTimer() => _notifier.cancelAutoStartTimer();
   void resetForNewWorkout() => _notifier.resetForNewWorkout();
   void loadRoutine(Routine routine) => _notifier.loadRoutine(routine);
+  void updateWorkoutParameters(WorkoutParameters parameters) => _notifier.updateWorkoutParameters(parameters);
 }
