@@ -5,9 +5,11 @@ import 'dart:math' as math;
 import '../providers/routine_provider.dart';
 import '../widgets/common/empty_state.dart';
 import '../widgets/dialogs/routine_builder_dialog.dart';
+import '../widgets/dialogs/exercise_picker_dialog.dart';
 import '../widgets/workout/routine_card.dart';
 import '../theme/spacing.dart';
 import '../../domain/models/routine.dart' as domain;
+import '../../../data/database/app_database.dart';
 
 /// Routines tab screen displaying list of workout routines.
 /// 
@@ -114,26 +116,58 @@ class RoutinesTab extends ConsumerWidget {
   }
 
   Future<void> _showRoutineBuilder(BuildContext context, WidgetRef ref, domain.Routine? routine) async {
-    // TODO: Get exercises from exercise provider/repository (Phase 2)
-    // For now, pass empty list - builder dialog will handle it
-    return; // Temporarily disabled until Phase 2
+    // Get exercise repository and fetch exercises
+    final repository = ref.read(exerciseRepositoryProvider);
+    List<Exercise> exercises;
+    
+    try {
+      // Get all exercises from stream (first value)
+      final stream = repository.getAllExercises();
+      exercises = await stream.first;
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading exercises: $error'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return;
+    }
 
-    // ignore: dead_code
-    await RoutineBuilderDialog.show(
+    if (exercises.isEmpty && context.mounted) {
+      // Show error if no exercises available
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No exercises available. Please add exercises first.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Create map of exerciseId -> exerciseName
+    final exerciseNames = <String, String>{};
+    for (final exercise in exercises) {
+      exerciseNames[exercise.id] = exercise.name;
+    }
+
+    // Show routine builder dialog
+    if (!context.mounted) return;
+    final savedRoutine = await RoutineBuilderDialog.show(
       context,
       routine: routine,
-      exercises: const [],
-      onSave: (savedRoutine) {
-        // TODO: Save routine via routineActionsProvider
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(routine == null ? 'Routine created' : 'Routine updated'),
-            ),
-          );
-        }
-      },
+      exerciseNames: exerciseNames,
     );
+
+    if (savedRoutine != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(routine == null ? 'Routine created' : 'Routine updated'),
+        ),
+      );
+    }
   }
 
   void _startWorkout(BuildContext context, WidgetRef ref, domain.Routine routine) {

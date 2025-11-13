@@ -5,6 +5,8 @@ import '../../../domain/models/routine_exercise.dart' as domain;
 import '../../providers/routine_provider.dart';
 import '../../theme/spacing.dart';
 import '../routines/exercise_list_item.dart';
+import 'exercise_picker_dialog.dart';
+import 'exercise_edit_bottom_sheet.dart';
 
 /// Dialog for creating or editing a workout routine
 ///
@@ -75,12 +77,36 @@ class _RoutineBuilderDialogState extends ConsumerState<RoutineBuilderDialog> {
     super.dispose();
   }
 
-  void _handleAddExercise() {
-    // STUB - Phase 3: Exercise picker dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Exercise picker coming in Phase 3'),
-      ),
+  Future<void> _handleAddExercise() async {
+    // Show exercise picker dialog
+    final selectedIds = await ExercisePickerDialog.show(
+      context,
+      selectedIds: {},
+      onConfirm: (ids) {}, // Called before dialog closes
+    );
+
+    if (!mounted || selectedIds == null || selectedIds.isEmpty) {
+      return; // User cancelled or didn't select
+    }
+
+    // Get the first selected exercise ID (single selection)
+    final exerciseId = selectedIds.first;
+    final nextOrder = _exercises.isEmpty ? 0 : _exercises.map((e) => e.order).reduce((a, b) => a > b ? a : b) + 1;
+
+    // Show exercise edit bottom sheet for configuration
+    await ExerciseEditBottomSheet.show(
+      context,
+      exerciseId: exerciseId,
+      order: nextOrder,
+      onSave: (savedExercise) {
+        setState(() {
+          _exercises.add(savedExercise);
+          // Reorder all exercises
+          for (int i = 0; i < _exercises.length; i++) {
+            _exercises[i] = _exercises[i].copyWith(order: i);
+          }
+        });
+      },
     );
   }
 
@@ -122,13 +148,25 @@ class _RoutineBuilderDialogState extends ConsumerState<RoutineBuilderDialog> {
     });
   }
 
-  void _handleEdit(int index) {
-    // STUB - Phase 3: Exercise edit bottom sheet
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Exercise editing coming in Phase 3'),
-      ),
+  Future<void> _handleEdit(int index) async {
+    final exercise = _exercises[index];
+    
+    // Show exercise edit bottom sheet
+    final updatedExercise = await ExerciseEditBottomSheet.show(
+      context,
+      exercise: exercise,
+      onSave: (savedExercise) {
+        setState(() {
+          _exercises[index] = savedExercise;
+        });
+      },
     );
+
+    if (updatedExercise != null) {
+      setState(() {
+        _exercises[index] = updatedExercise;
+      });
+    }
   }
 
   void _handleSave() {
