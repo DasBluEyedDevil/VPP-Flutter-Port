@@ -19,6 +19,7 @@ import '../widgets/workout/rep_counter_card.dart';
 import '../widgets/workout/current_exercise_card.dart';
 import '../widgets/workout/live_metrics_card.dart';
 import '../widgets/dialogs/connection_lost_dialog.dart';
+import '../widgets/dialogs/workout_setup_dialog.dart';
 import '../navigation/routes.dart';
 
 class ActiveWorkoutScreen extends ConsumerWidget {
@@ -122,10 +123,9 @@ class ActiveWorkoutScreen extends ConsumerWidget {
                 ...workoutState.when(
                   idle: () => [
                     IdleStateCard(
-                      onShowSetup: () {
-                        // TODO: Phase 2 - Show workout setup dialog
-                        // For now, start workout directly
-                        ref.read(workoutSessionActionsProvider).startWorkout();
+                      onShowSetup: () async {
+                        await WorkoutSetupDialog.show(context);
+                        // Dialog handles starting workout if confirmed
                       },
                     ),
                   ],
@@ -247,7 +247,7 @@ class ActiveWorkoutScreen extends ConsumerWidget {
               context,
               RestTimerCard(
                 secondsRemaining: restSecondsRemaining,
-                totalSeconds: 90, // TODO: get from exercise settings
+                totalSeconds: _getRestTotalSeconds(state),
                 nextExerciseName: nextExerciseName,
                 isLastExercise: isLastExercise,
                 currentSet: currentSet,
@@ -281,7 +281,10 @@ class ActiveWorkoutScreen extends ConsumerWidget {
     return [
       ActiveStateCard(
         onStop: () => _confirmEndWorkout(context, ref),
-        justLiftTimer: null, // TODO: Get from state if in Just Lift mode
+        justLiftTimer: state.workoutParameters.isJustLift &&
+                state.autoStopState.isActive
+            ? state.autoStopState.secondsRemaining
+            : null,
       ),
       const SizedBox(height: 16),
       RepCounterCard(
@@ -414,13 +417,24 @@ class ActiveWorkoutScreen extends ConsumerWidget {
             onFailed: () {},
           );
         },
-        onEndWorkout: () {
+        onDismiss: () {
           Navigator.pop(context);
           ref.read(workoutSessionActionsProvider).stopWorkout();
           context.go(Routes.home);
         },
       ),
     );
+  }
+
+  /// Get rest timer total seconds from routine exercise or default to 90
+  int _getRestTotalSeconds(WorkoutSessionState state) {
+    final routine = state.loadedRoutine;
+    if (routine != null &&
+        state.currentExerciseIndex < routine.exercises.length) {
+      final exercise = routine.exercises[state.currentExerciseIndex];
+      return exercise.restSeconds;
+    }
+    return 90; // Default rest time
   }
 
   Future<void> _confirmEndWorkout(BuildContext context, WidgetRef ref) async {
