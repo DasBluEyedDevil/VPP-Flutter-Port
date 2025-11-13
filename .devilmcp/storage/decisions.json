@@ -1221,5 +1221,41 @@
     "timestamp": "2025-11-12T21:30:37.407128",
     "outcome": null,
     "actual_impact": null
+  },
+  {
+    "id": 34,
+    "decision": "Select Daily Routines Screen as screen 11/16",
+    "rationale": "Daily Routines Screen is a good candidate for screen 11 because: (1) It's independent and doesn't require other screens to be implemented first, (2) Analytics Screen would be complex requiring all 3 tabs (History, Personal Bests, Trends), (3) Exercise Picker and Routine Builder are dialogs that are better done after their parent screens, (4) Active Workout Phase 2 requires Phase 1 integration first. Daily Routines is a straightforward CRUD screen for managing daily workout routines.",
+    "context": {
+      "completed_screens": 10,
+      "total_screens": 16,
+      "progress": "62.5%",
+      "just_completed": "PR Screen (screen 10)",
+      "remaining": [
+        "Analytics Screen",
+        "Single Exercise Screen",
+        "Daily Routines Screen",
+        "Exercise Picker Dialog",
+        "Routine Builder Dialog",
+        "Active Workout Phase 2"
+      ]
+    },
+    "alternatives_considered": [
+      "Analytics Screen (requires 3 tabs, complex)",
+      "Single Exercise Screen (moderate complexity)",
+      "Exercise Picker Dialog (dialog, better after parent screens)",
+      "Routine Builder Dialog (dialog, better after parent screens)",
+      "Active Workout Phase 2 (requires Phase 1 integration)"
+    ],
+    "expected_impact": "Complete Daily Routines Screen with Quadrumvirate workflow. Expected widgets: DailyRoutinesScreen, routine cards, add/edit dialogs, date selector. Will bring progress to 11/16 screens (68.75%).",
+    "risk_level": "low",
+    "tags": [
+      "screen-selection",
+      "ui-porting",
+      "screen-11"
+    ],
+    "timestamp": "2025-11-12T22:07:14.449935",
+    "outcome": null,
+    "actual_impact": null
   }
 ]
