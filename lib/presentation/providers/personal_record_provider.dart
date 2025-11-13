@@ -10,9 +10,10 @@ final personalRecordRepositoryProvider = Provider<PersonalRecordRepository>((ref
 /// Stream provider for personal records
 ///
 /// Ported from MainViewModel.kt personalRecords (lines 112-116)
+/// Uses getAllPRsGrouped() to get all PRs (grouping logic done in UI layer)
 final personalRecordsProvider = StreamProvider<List<PersonalRecord>>((ref) {
   final repo = ref.watch(personalRecordRepositoryProvider);
-  return repo.getAllPRs();
+  return repo.getAllPRsGrouped();
 });
 
 /// Actions provider for personal record operations
